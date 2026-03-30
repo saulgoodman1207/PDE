@@ -1,0 +1,6 @@
+\contentsline {section}{\numberline {1}算例 1：论文算例 5.1（\texttt {paper\_example\_5\_1}）}{2}{section.1}%
+\contentsline {section}{\numberline {2}算例 2：温和分离指数算例（\texttt {mild\_exp\_separable}）}{4}{section.2}%
+\contentsline {section}{\numberline {3}算例 3：混合多项式凸算例（\texttt {mixed\_polynomial\_convex}）}{6}{section.3}%
+\contentsline {section}{\numberline {4}算例 4：温和六次凸算例（\texttt {mild\_sextic\_convex}）}{8}{section.4}%
+\contentsline {section}{\numberline {5}算例 5：高斯鼓包凸算例（\texttt {gaussian\_bump\_convex}）}{10}{section.5}%
+\contentsline {section}{\numberline {6}算例 6：四次凸算例（\texttt {quartic\_convex}）}{12}{section.6}%

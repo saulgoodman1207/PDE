@@ -1,0 +1,830 @@
+Appl. Numer. Math. 207 (2025) 621–641
+
+Contents lists available at ScienceDirect
+
+Applied Numerical Mathematics
+journal homepage: www.elsevier.com/locate/apnum
+
+Research Paper
+
+Spectral-Galerkin methods for the fully nonlinear
+Monge-Ampère equation ✩
+Lixiang Jin, Zhaoxiang Li ∗ , Peipei Wang, Lijun Yi
+Department of Mathematics, Shanghai Normal University, Shanghai, 200234, PR China
+
+A R T I C L E
+
+I N F O
+
+A B S T R A C T
+
+MSC:
+primary 65N35, 65N12, 65N15, 35J96
+
+In this paper, we develop two numerical methods, the Legendre-Galerkin method and the
+generalized Log orthogonal functions Galerkin method for numerically solving the fully nonlinear
+Monge-Ampère equation. Both methods are constructed based on the vanishing moment approach.
+To address both solution stability and computational eﬃciency, we propose a multiple-level
+framework for resolving discretization schemes. The mathematical justiﬁcations of the new
+approaches and the error estimates for the Legendre-Galerkin method are established. Numerical
+experiments validate the accuracy of our methods, and a comparative experiment demonstrates
+the advantage of Log orthogonal functions for problems with corner singularities. The results
+highlight that our methods have high-order accuracy and small computational cost.
+
+Keywords:
+Monge-Ampère equation
+Legendre-Galerkin method
+Vanishing moment method
+Error estimate
+GLOFs-Galerkin scheme
+
+1. Introduction
+This paper concerns the numerical solution provided by the Legendre-Galerkin and the generalized Log orthogonal functions
+(GLOFs)-Galerkin methods for the fully nonlinear Monge-Ampère equation with Dirichlet boundary condition,
+
+{
+det(𝐷2 𝑢)(𝑥, 𝑦) = 𝑓 (𝑥, 𝑦),
+𝑢(𝑥, 𝑦) = 𝑔(𝑥, 𝑦),
+
+(𝑥, 𝑦) ∈ Ω,
+(𝑥, 𝑦) ∈ 𝜕Ω,
+
+(1.1)
+
+where Ω ∈ ℝ2 is a bounded convex domain, 𝑓 is a strictly positive function on Ω, and
+
+det(𝐷2 𝑢) =
+
+𝜕 2 𝑢 𝜕 2 𝑢 ( 𝜕 2 𝑢 )2
+−
+𝜕𝑥𝜕𝑦
+𝜕𝑥2 𝜕𝑦2
+
+denotes the determinant of the Hessian matrix 𝐷2 𝑢. As previously discussed in [33], the solution of (1.1) is unique only in the cone
+of convex functions. The problem is uniformly elliptic with respect to 𝑢 if and only if 𝐷2 𝑢 is a positive deﬁnite matrix in Ω, which
+implies 𝑢 is locally uniformly convex. And it is degenerate elliptic if and only if 𝐷2 𝑢 is a semi-positive deﬁnite matrix in Ω, implying
+𝑢 is locally convex [30,47].
+
+✩ The work was partially supported by the NNSF of China (No. 12271366, 11871043, 12171322), the NSF of Shanghai, China (No. 22ZR1445500, 21ZR1447200)
+and the Science and Technology Innovation Plan of Shanghai (No. 23JC1403200).
+* Corresponding author.
+E-mail address: zxli@shnu.edu.cn (Z. Li).
+
+https://doi.org/10.1016/j.apnum.2024.09.028
+Received 2 February 2024; Received in revised form 3 September 2024; Accepted 28 September 2024
+Available online 3 October 2024
+0168-9274/© 2024 IMACS. Published by Elsevier B.V. All rights are reserved, including those for text and data mining, AI training, and similar
+technologies.
+
+Applied Numerical Mathematics 207 (2025) 621–641
+
+L. Jin, Z. Li, P. Wang et al.
+
+The Monge-Ampère equation is a well-known fully nonlinear partial diﬀerential equation and in a variety of broad applications,
+including diﬀerential geometry, meteorology, cosmology, economics, and optimal mass transportation problems [4,10,18,26,35].
+Due to its importance in applied science and the challenges stemming from the full nonlinearity, the convex constraint and the low
+regularity of the solutions, there is a growing interest in applying eﬃcient and accurate numerical methods to solve this problem.
+For smooth solutions of the problem (1.1), many approaches can lead to numerical methods that converge in practice [6,8,9,16,37,
+38,41,46]. Such as in [17], Dean and Glowinski used mixed ﬁnite element method to solve the saddle-point problem, transformed by
+a well-chosen augmented Lagrangian approach. Many researchers employed iterative algorithms to obtain the numerical solution of
+the problem (1.1). In [39], the researchers considered some multiscale radial basis function collocation methods, such as the cascadic
+meshfree method, the stationary multilevel method and the hierarchical radial basis function method, for solving the two-dimensional
+Monge-Ampère equation with Dirichlet boundary condition. In [5], the authors implemented the cascadic iterative algorithm and
+developed the discretization of the meshless generalized ﬁnite diﬀerence method to numerically solve the problem (1.1). In [36], the
+authors obtained the numerical solution by developing a trivariate spline collocation approach to solve iterative Poisson equations.
+They employed an averaged algorithm to ensure the convergence of their iterations.
+For weak solutions of the problem (1.1), such as viscosity and Aleksandrov solutions, numerous numerical methods have been
+developed to capture and analyze these weak solutions [34]. In [42], Oliker and Prussner proposed a special discretization method
+for the equation based on its geometric interpretation. This method is speciﬁcally designed to approximate non-smooth Alexandrov
+solutions, where the right-hand side is a sum of Dirac measures. In [27], Froese constructed a wide stencil ﬁnite diﬀerence scheme for
+the Monge-Ampère equation that converges to the viscosity solution. Then, Froese and Oberman [28] devised a hybrid discretization
+approach for the problem (1.1), taking advantage of the optimal features of both natural discretization and monotone discretization.
+In [1], Awanou oﬀered numerical evidence of convergence for nonsmooth solutions employing a time-marching method. In [2],
+the author presented a theory explaining why standard discretizations exhibit numerical convergence for Aleksandrov solutions of
+the Monge-Ampère equation. In [20,22], Feng and Neilan presented the vanishing moment method to compute moment solutions,
+providing an approximation to the viscosity solutions of the problem (1.1) through a quasilinear fourth-order partial diﬀerential
+equation (PDE). Building on this concept, Feng and his collaborators developed a series of ﬁnite element methods in [12,19,21,
+24,40]. These methods encompassed 𝐶 0 penalty method, discontinuous Galerkin (DG) method, mixed ﬁnite element method, and
+more. Recently, in [29], the researchers proposed a regularization of the Monge-Ampère equation in planar convex domains through
+uniformly elliptic Hamilton-Jacobi Bellman equations, eliminating the limitation imposed by convexity constraints.
+However, from the literature review, it appears that there has been limited research on the application of the spectral methods for
+solving the fully nonlinear Monge-Ampère equation, particularly for solutions with weak singularities. Therefore, it is necessary to
+develop eﬃcient and highly accurate numerical algorithms for these equations. In this paper, based on the vanishing moment method,
+we develop the Legendre-Galerkin method with 𝐿2 -projection to numerically solve the fully nonlinear Monge-Ampère equation (1.1).
+It oﬀers high accuracy, and the computational cost is relatively small compared to other methods. However, eﬀectively managing
+the singularities of equations has consistently presented a signiﬁcant challenge. Inspired by Chen and Shen [13–15], we present
+the GLOFs-Galerkin method for the numerical approximation of problem (1.1) with corner singularities. Considering both solution
+stability and computational eﬃciency, we design a multiple-level framework for resolving discretization schemes. Several numerical
+examples are provided to show the eﬃciency of our proposed methods. The main contributions and remarkable features of this study
+are summarized as follows.
+• Based on the vanishing moment method, we propose the Legendre-Galerkin method with 𝐿2 -projection to numerically solve the
+fully nonlinear Monge-Ampère equation in two dimensional setting with the Dirichlet boundary conditions.
+• When dealing with singular solutions, we present the GLOFs-Galerkin method for the numerical approximation solution of
+problem (1.1) with corner singularities.
+• To address both solution stability and computational eﬃciency, we propose a multiple-level framework for resolving discretization schemes.
+• We conduct a convergence analysis of the Legendre-Galerkin method with 𝐿2 -projection, discussing error estimates under 𝐻 1 -,
+𝐻 2 -, and 𝐿2 -norms, which yield optimal results.
+This paper is organized as follows: In Section 2, we provide a concise introduction to the vanishing moment method and derive
+its Galerkin formulation. In Section 3, based on the vanishing moment method, we establish the Legendre- and GLOFs-Galerkin
+formulations for the fourth-order quasilinear equation and propose a multiple-level framework for solving discretization schemes. In
+Section 4, we present the convergence analysis for the Legendre-Galerkin method. In Section 5, we provide numerical examples for
+both smooth and non-smooth solutions to verify the eﬀectiveness of the Legendre- and GLOFs-Galerkin methods. Finally, we make
+some concluding observations.
+2. The vanishing moment method and the variational formulation of the given equation
+In this section, we ﬁrst provide a concise introduction to the vanishing moment method, as proposed in [20]. By adding a higherorder perturbation, the vanishing moment method eﬀectively regularizes the problem at the PDE level, resulting in a fourth-order
+quasilinear problem associated with the Monge-Ampère equation,
+622
+
+Applied Numerical Mathematics 207 (2025) 621–641
+
+L. Jin, Z. Li, P. Wang et al.
+
+⎧−𝜀Δ2 𝑢𝜀 (𝑥, 𝑦) + det(𝐷2 𝑢𝜀 )(𝑥, 𝑦) = 𝑓 (𝑥, 𝑦),
+⎪ 𝜀
+(𝑥, 𝑦) ∈ 𝜕Ω,
+⎨𝑢 (𝑥, 𝑦) = 𝑔(𝑥, 𝑦),
+⎪Δ𝑢𝜀 (𝑥, 𝑦) = 𝜀,
+(𝑥,
+𝑦) ∈ 𝜕Ω.
+⎩
+
+(𝑥, 𝑦) ∈ Ω,
+(2.1)
+
+For the 𝑛-dimensional radially symmetric case, Feng and Neilan demonstrated in [23,25] that 𝑢𝜀 converges uniformly and compactly to the unique convex viscosity solution of the Dirichlet Monge-Ampère equation (1.1). Although there is no theoretical
+foundation for its convergence in other cases, the vanishing moment method has been observed to work quite well in practice.
+As the parameter 𝜀 → 0+ , the fourth-order quasilinear equation (2.1) can be used to approximate the viscosity solution of the MongeAmpère equation (1.1) with the Dirichlet boundary condition. However, introducing any additional boundary condition inherently
+gives rise to a “boundary layer” within both the physical and mathematical domains. Hence, it is advisable to opt for a boundary condition that minimizes this boundary layer. As shown in [20], the impact of the boundary layer in (2.1) is duly noted and considered
+feasible.
+To facilitate the more convenient selection of orthogonal basis functions, we transform inhomogeneous boundary conditions of the
+equation (2.1) into a homogeneous form. Inspired by [44], we design a decomposition 𝑢𝜀 = 𝑈 𝜀 + 𝑈𝑏 for the solution of the equation
+(2.1), where 𝑈 𝜀 satisﬁes the following equation
+
+⎧−𝜀Δ2 𝑈 𝜀 (𝑥, 𝑦) + det(𝐷2 𝑈 𝜀 )(𝑥, 𝑦) + 𝐸(𝑈 𝜀 , 𝑈𝑏 )(𝑥, 𝑦) = 𝑓̃(𝑥, 𝑦),
+⎪ 𝜀
+(𝑥, 𝑦) ∈ 𝜕Ω,
+⎨𝑈 (𝑥, 𝑦) = 0,
+⎪Δ𝑈 𝜀 (𝑥, 𝑦) = 𝜀 − Δ𝑈 (𝑥, 𝑦),
+(𝑥, 𝑦) ∈ 𝜕Ω,
+𝑏
+⎩
+
+(𝑥, 𝑦) ∈ Ω,
+(2.2)
+
+where
+
+𝑓̃(𝑥, 𝑦) = 𝑓 (𝑥, 𝑦) − det(𝐷2 𝑈𝑏 )(𝑥, 𝑦) + 𝜀Δ2 𝑈𝑏 (𝑥, 𝑦),
+𝐸(𝑈 𝜀 , 𝑈𝑏 ) =
+
+𝜕 2 𝑈𝑏 𝜕 2 𝑈 𝜀
+𝜕𝑥2
+
+𝜕𝑦2
+
++
+
+𝜕 2 𝑈𝑏 𝜕 2 𝑈 𝜀
+𝜕𝑦2
+
+𝜕𝑥2
+
+−2
+
+𝜕 2 𝑈𝑏 𝜕 2 𝑈 𝜀
+.
+𝜕𝑥𝜕𝑦 𝜕𝑥𝜕𝑦
+
+For simplicity, we take Ω = [𝑎, 𝑏] × [𝑐, 𝑑], setting
+
+)
+𝑑 −𝑦 ( 2
+𝑏−𝑥 1
+𝑏−𝑥 1
+𝑥−𝑎 1
+𝑔− (𝑦) +
+𝑔− (𝑥) −
+𝑔− (𝑐) −
+𝑔+ (𝑐)
+𝑏−𝑎
+𝑑 −𝑐
+𝑏−𝑎
+𝑏−𝑎
+)
+𝑦−𝑐 ( 2
+𝑥−𝑎 1
+𝑏−𝑥 1
+𝑥−𝑎 1
+𝑔+ (𝑥) −
++
+𝑔+ (𝑦) +
+𝑔− (𝑑) −
+𝑔+ (𝑑) ,
+𝑏−𝑎
+𝑑 −𝑐
+𝑏−𝑎
+𝑏−𝑎
+
+𝑈𝑏 (𝑥, 𝑦) =
+
+(2.3)
+
+where
+
+𝑔−1 (𝑦) = 𝑔(𝑎, 𝑦),
+
+𝑔+1 (𝑦) = 𝑔(𝑏, 𝑦),
+
+𝑔−2 (𝑥) = 𝑔(𝑥, 𝑐),
+
+𝑔+2 (𝑥) = 𝑔(𝑥, 𝑑).
+
+After applying the linear transformation, the inhomogeneous boundary has been eﬀectively converted into a homogeneous boundary. A variational formulation of equation (2.2) is to seek solution 𝑈 𝜀 ∈ 𝐻 2 (Ω) ∩ 𝐻01 (Ω), such that
+
+(
+) (
+)
+−𝜀(Δ𝑈 𝜀 , Δ𝑣) + det(𝐷2 𝑈 𝜀 ), 𝑣 + 𝐸(𝑈 𝜀 , 𝑈𝑏 ), 𝑣 = 𝐹 (𝑣), ∀𝑣 ∈ 𝐻 2 (Ω) ∩ 𝐻01 (Ω),
+
+(2.4)
+
+where
+
+(
+)
+𝜕𝑣
+𝐹 (𝑣) = 𝑓 − det(𝐷2 𝑈𝑏 ), 𝑣 + 𝜀(Δ𝑈𝑏 , Δ𝑣) − (𝜀2 , )𝜕Ω .
+𝜕𝑛
+3. Spectral-Galerkin methods and a multiple-level framework for solving discretization schemes
+In this section, we will respectively establish the Legendre- and GLOFs-Galerkin formulations for the fourth-order quasilinear
+equation (2.2), and propose a multiple-level framework for solving discretization schemes.
+3.1. Legendre-Galerkin method with 𝐿2 -projection
+The Legendre polynomials are an important special case of the Jacobi polynomials with the uniform weight function 𝜔(𝑥) ≡ 1.
+Let 𝐿𝑛 (𝑥) represent the Legendre polynomials of degree 𝑛, and denote 𝑁 as the set of all Legendre polynomials of degree at most
+𝑁 . We present below a compilation of essential formulas and properties [11,31,45] required in this paper.
+Firstly, the Legendre polynomials 𝐿𝑛 (𝑥) satisfy the orthogonality relation over the interval [−1, 1],
+1
+
+∫
+
+𝐿𝑛 (𝑥)𝐿𝑚 (𝑥)𝑑𝑥 = 𝛾𝑛 𝛿𝑚𝑛 ,
+
+𝛾𝑛 =
+
+2
+,
+2𝑛 + 1
+
+(3.1)
+
+−1
+
+and the three-term recurrence relation
+
+(𝑛 + 1)𝐿𝑛+1 (𝑥) = (2𝑛 + 1)𝑥𝐿𝑛 (𝑥) − 𝑛𝐿𝑛−1 (𝑥),
+
+𝑛 ⩾ 1,
+
+(3.2)
+623
+
+Applied Numerical Mathematics 207 (2025) 621–641
+
+L. Jin, Z. Li, P. Wang et al.
+
+where 𝐿0 (𝑥) = 1, 𝐿1 (𝑥) = 𝑥.
+Additionally, the following derivative recurrence relations hold
+
+𝐿′𝑛 (𝑥) =
+
+𝑛−1
+∑
+𝑘=0
+𝑘+𝑛,𝑜𝑑𝑑
+
+(3.3)
+
+(2𝑘 + 1)𝐿𝑘 (𝑥),
+
+(2𝑛 + 1)𝐿𝑛 (𝑥) = 𝐿′𝑛+1 (𝑥) − 𝐿′𝑛−1 (𝑥),
+𝐿′′
+𝑛 (𝑥) =
+
+𝑛−2
+∑
+𝑘=0
+𝑘+𝑛,𝑒𝑣𝑒𝑛
+
+𝑛 ≥ 1,
+
+(3.4)
+
+1
+(𝑘 + )(𝑛(𝑛 + 1) − 𝑘(𝑘 + 1))𝐿𝑘 (𝑥).
+2
+
+(3.5)
+
+Denoting {𝑥𝑗 , 𝜔𝑗 }𝑁
+as the set of Legendre-Gauss (LG) nodes and weights, the expression relating to Legendre-Gauss integration
+𝑗=0
+is precisely established as follows:
+1
+
+∫
+
+𝑓 (𝑥)𝑔(𝑥) 𝑑𝑥 =
+
+𝑁
+∑
+𝑗=0
+
+−1
+
+𝑓 (𝑥𝑗 )𝑔(𝑥𝑗 )𝜔𝑗 ,
+
+∀𝑓 ⋅ 𝑔 ∈ 2𝑁+1 .
+
+(3.6)
+
+Furthermore, since the Lagrange interpolation polynomial 𝑁 𝑢 relative to the LG points also belongs to 𝑁 , the backward discrete
+Legendre transform holds
+
+𝑢(𝑥𝑗 ) = (𝑁 𝑢)(𝑥𝑗 ) =
+
+𝑁
+∑
+𝑛=0
+
+𝑢̃ 𝑛 𝐿𝑛 (𝑥𝑗 ),
+
+0 ⩽ 𝑗 ⩽ 𝑁.
+
+(3.7)
+
+And the forward discrete Legendre transform
+𝑁
+
+𝑢̃ 𝑛 =
+
+1 ∑
+𝑢(𝑥𝑗 )𝐿𝑛 (𝑥𝑗 )𝜔𝑗 ,
+𝛾𝑛 𝑗=0
+
+0≤𝑛≤𝑁
+
+(3.8)
+
+can be obtained by (3.1).
+Through a linear transformation, any bounded interval [𝑎, 𝑏] can be readily mapped to a standard interval [−1, 1]. Hence, for
+the sake of facilitating the construction and analysis of the Legendre-Galerkin method, we make the convenient assumption that the
+interval 𝐼 is set to [−1, 1], and the domain Ω is deﬁned as Ω = 𝐼 2 .
+The approximation space is then deﬁned as follows:
+0
+𝑋𝑁
+(𝐼) = {𝑣 ∈ 𝑁 (𝐼) ∶ 𝑣(±1) = 0},
+
+0
+0
+0
+𝑋𝑁
+(Ω) = 𝑋𝑁
+(𝐼) ⊗ 𝑋𝑁
+(𝐼).
+
+𝜀 ∈ 𝑋 0 (Ω) such that for any 𝑣 ∈ 𝑋 0 (Ω),
+And the Legendre-Galerkin approximation for problem (2.2) is to ﬁnd 𝑈𝑁
+𝑁
+𝑁
+𝑁
+
+(
+) (
+) (
+)
+𝜀
+𝜀
+𝜀
+−𝜀 Δ𝑈𝑁
+, Δ𝑣𝑁 + det(𝐷2 𝑈𝑁
+), 𝑣𝑁 + 𝐸(𝑈𝑁
+, 𝑈𝑏 ), 𝑣𝑁 = 𝐹 (𝑣𝑁 ).
+
+(3.9)
+
+Subsequently, we proceed with the construction of the matrix form for the spectral formulation (3.9). Deﬁne the two-dimensional
+Legendre basis functions as Φ𝑛𝑚 (𝑥, 𝑦) = 𝜙𝑛 (𝑥)𝜙𝑚 (𝑦), where 𝜙𝑛 (𝑥) = 𝐿𝑛 (𝑥) − 𝐿𝑛+2 (𝑥), 𝑛 = 0, ⋯ , 𝑁 − 2. The functions 𝜙𝑚 (𝑦) and 𝜙𝑛 (𝑥)
+share identical deﬁnitions. It is easy to check that
+
+{
+}𝑁−2
+0
+span Φ𝑛𝑚 (𝑥, 𝑦) 𝑛,𝑚=0 ⊂ 𝑋𝑁
+(Ω).
+𝜀 (𝑥, 𝑦) can be expressed as a linear combination of basis functions. By rearranging the coeﬃcients, we can
+Then the solution 𝑈𝑁
+establish the following relationship
+𝜀
+𝑈𝑁
+(𝑥, 𝑦) =
+
+𝑁−2
+∑
+𝑛,𝑚=0
+
+𝑈̂ 𝑛𝑚 𝜙𝑛 (𝑥)𝜙𝑚 (𝑦) =
+
+𝑁
+∑
+𝑛,𝑚=0
+
+𝑈̃ 𝑛𝑚 𝐿𝑛 (𝑥)𝐿𝑚 (𝑦),
+
+(3.10)
+
+where {𝑈̂ 𝑛𝑚 }𝑁−2
+and {𝑈̃ 𝑛𝑚 }𝑁
+are the unknown coeﬃcients.
+𝑛,𝑚=0
+𝑛,𝑚=0
+
+̃ 𝑁,𝑝 ∶ 𝐶(Ω) → 𝑁 (Ω). This projection
+To handle the nonlinear terms, inspired by [48], we introduce an 𝐿2 -projection denoted as Π
+is deﬁned for any 𝑢(𝑥, 𝑦) ∈ 𝐶(Ω), such that
+𝑁
+∑
+(
+)
+̃ 𝑁,𝑝 (𝑢(𝑥, 𝑦))𝑝 ∶=
+𝑢̃ 𝑝𝑛𝑚 𝐿𝑛 (𝑥)𝐿𝑚 (𝑦).
+Π
+
+(3.11)
+
+𝑛,𝑚=0
+
+̃ 𝑁,𝑝 , the fully nonlinear term (𝜕 2 𝑈 𝜀 𝜕 2 𝑈 𝜀 )𝑝 is transformed into the following expression
+Under the eﬀect of the projection operator Π
+𝑥𝑥 𝑁 𝑦𝑦 𝑁
+𝑁
+(
+) ∑
+(𝑝)
+̃ 𝑁,𝑝 (𝜕 2 𝑈 𝜀 𝜕 2 𝑈 𝜀 )𝑝 =
+Π
+𝐿𝑛 (𝑥)𝐿𝑚 (𝑦),
+𝑈̃ 𝑛𝑚
+𝑥𝑥 𝑁 𝑦𝑦 𝑁
+
+(3.12)
+
+𝑛,𝑚=0
+
+624
+
+Applied Numerical Mathematics 207 (2025) 621–641
+
+L. Jin, Z. Li, P. Wang et al.
+2 𝑈 𝜀 )𝑞 is transformed into
+and (𝜕𝑥𝑦
+𝑁
+𝑁
+(
+) ∑
+(𝑞)
+̃ 𝑁,𝑞 (𝜕 2 𝑈 𝜀 )𝑞 =
+𝑈̃ 𝑛𝑚
+𝐿𝑛 (𝑥)𝐿𝑚 (𝑦).
+Π
+𝑥𝑦 𝑁
+
+(3.13)
+
+𝑛,𝑚=0
+
+𝜀 , then we have
+Since the interpolation of the polynomial is still itself, considering the Lagrange interpolation of 𝑈𝑁
+𝜀
+𝑈𝑁
+(𝑥, 𝑦) =
+
+𝑁
+∑
+𝑛,𝑚=0
+
+𝑈𝑛𝑚 𝑙𝑛 (𝑥)𝑙𝑚 (𝑦),
+
+(3.14)
+
+where {𝑙𝑛 (𝑥)}𝑁
+are the Lagrange basis polynomials on LG points {𝑥𝑗 }𝑁
+, the general expression of 𝑙𝑛 (𝑥) is given by
+𝑛=0
+𝑗=0
+
+∏
+
+𝑥 − 𝑥𝑗
+
+0⩽𝑗⩽𝑁,𝑛≠𝑗
+
+𝑥𝑛 − 𝑥𝑗
+
+𝑙𝑛 (𝑥) =
+
+,
+
+0 ≤ 𝑛 ≤ 𝑁.
+
+𝜀 (𝑥 , 𝑦 ) for each 𝑛, 𝑚 = 0, 1, ⋯ , 𝑁 . Utilizing the derivative recurrence relations (3.4) and (3.5), we can rewrite
+It follows that 𝑈𝑛𝑚 = 𝑈𝑁
+𝑛 𝑚
+𝜀
+𝜀 (𝑥, 𝑦) and 𝜕 𝑈 𝜀 (𝑥, 𝑦) as
+their derivatives 𝜕𝑥𝑥 𝑈𝑁 (𝑥, 𝑦), 𝜕𝑦𝑦 𝑈𝑁
+𝑥𝑦 𝑁
+𝜀
+𝜕𝑥𝑥 𝑈𝑁
+(𝑥, 𝑦) =
+
+𝜀
+𝜕𝑥𝑦 𝑈𝑁
+(𝑥, 𝑦) =
+
+𝜀
+𝜕𝑦𝑦 𝑈𝑁
+(𝑥, 𝑦) =
+
+𝑁
+∑
+𝑛,𝑚=0
+𝑁
+∑
+𝑛,𝑚=0
+𝑁
+∑
+𝑛,𝑚=0
+
+′′
+𝑈̃ 1,𝑚𝑛
+𝐿𝑛 (𝑥)𝐿𝑚 (𝑦),
+
+(3.15a)
+
+′′
+𝑈̃ 2,𝑚𝑛
+𝐿𝑛 (𝑥)𝐿𝑚 (𝑦),
+
+(3.15b)
+
+′′
+𝐿𝑛 (𝑥)𝐿𝑚 (𝑦).
+𝑈̃ 3,𝑚𝑛
+
+(3.15c)
+
+Moreover, we expand the unknown coeﬃcients of equation (3.10) to (3.15) into the following vectors
+
+𝑈̂ = (𝑈̂ 00 , ⋯ , 𝑈̂ (𝑁−2)(𝑁−2) )𝑇 ,
+𝑈 = (𝑈00 , ⋯ , 𝑈𝑁𝑁 )𝑇 ,
+
+𝑈̄ = (𝑈̄ 00 , ⋯ , 𝑈̄ (𝑁−2)(𝑁−2) )𝑇 ,
+
+𝑈̃ = (𝑈̃ 00 , ⋯ , 𝑈̃ 𝑁𝑁 )𝑇 ,
+
+(𝑝)
+(𝑝) 𝑇
+𝑈̃ (𝑝) = (𝑈̃ 00
+, ⋯ , 𝑈̃ 𝑁𝑁
+) ,
+
+(𝑞)
+(𝑞) 𝑇
+′′
+′′
+, ⋯ , 𝑈̃ 𝑁𝑁
+) ,
+𝑈̃ 𝑖′′ = (𝑈̃ 𝑖,00
+, ⋯ , 𝑈̃ 𝑖,𝑁𝑁
+)𝑇 , 𝑖 = 1, 2, 3,
+𝑈̃ (𝑞) = (𝑈̃ 00
+( 𝜀
+)
+where 𝑈̄ 𝑘𝑗 = 𝑈𝑁 (𝑥, 𝑦), 𝜙𝑗 (𝑥)𝜙𝑘 (𝑦) . In accordance with the properties (3.1) to (3.8), we have the following relationships between
+
+the unknown coeﬃcients:
+
+𝑈̃ = 𝐵1 ⊗ 𝐵1 𝑈 ,
+𝑈̃ = 𝐵3 ⊗ 𝐵3 𝑈̂ ,
+
+𝑈̄ = (𝐵3𝑇 ⊗ 𝐵3𝑇 )(𝐵2 ⊗ 𝐵2 )𝑈̂ ,
+𝑈̃ 1′′ = 𝐵5 ⊗ 𝐼 𝑈̃ ,
+
+𝑈̃ 2′′ = 𝐵6 ⊗ 𝐵6 𝑈̃ ,
+
+𝑈 = 𝐵4 ⊗ 𝐵4 𝑈̃ ,
+𝑈̃ 3′′ = 𝐼 ⊗ 𝐵5 𝑈̃ ,
+
+where 𝐼 is an identity matrix, ⊗ denotes the Kronecker product, 𝐵1 is the forward Legendre transform, 𝐵2 = (𝑏2𝑘𝑗 )𝑁
+, 𝐵3 =
+𝑘,𝑗=0
+and 𝐵6 = (𝑏6𝑘𝑗 )𝑁
+. Their entries are deﬁned by the
+(𝑏3𝑘𝑗 )0≤𝑘≤𝑁,0≤𝑗≤𝑁−2 , 𝐵4 is the backward Legendre transform, 𝐵5 = (𝑏5𝑘𝑗 )𝑁
+𝑘,𝑗=0
+𝑘,𝑗=0
+
+following expressions
+
+{
+𝑏2𝑘𝑗 =
+
+1
+,
+𝑘+1∕2
+
+0,
+
+𝑘 = 𝑗,
+otherwise,
+
+⎧1,
+
+𝑘 = 𝑗 and 0 ≤ 𝑘, 𝑗 ≤ 𝑁 − 2,
+𝑘 = 𝑗 + 2 and 0 ≤ 𝑗 ≤ 𝑁 − 2, 0 ≤ 𝑘 ≤ 𝑁,
+⎪0,
+otherwise,
+⎩
+{
+(
+)
+(𝑘 + 1∕2) 𝑗(𝑗 + 1) − 𝑘(𝑘 + 1) , (𝑘 + 𝑗) is even and 𝑘 ≤ 𝑗 − 2,
+𝑏5𝑘𝑗 =
+otherwise,
+0,
+{
+2𝑘 + 1,
+(𝑘 + 𝑗) is odd and 0 ≤ 𝑘 ≤ 𝑗 − 1,
+𝑏6𝑘𝑗 =
+0,
+otherwise.
+⎪
+𝑏3𝑘𝑗 = ⎨−1,
+
+To simplify the notations, we denote
+
+𝑇1 = (𝐵3𝑇 ⊗ 𝐵3𝑇 )(𝐵2 ⊗ 𝐵2 ),
+
+𝑇2 = (𝐵4 ⊗ 𝐵4 )(𝐼 ⊗ 𝐵5 )(𝐵3 ⊗ 𝐵3 ),
+
+𝑇3 = (𝐵4 ⊗ 𝐵4 )(𝐵5 ⊗ 𝐼)(𝐵3 ⊗ 𝐵3 ),
+
+𝑇4 = (𝐵4 ⊗ 𝐵4 )(𝐵6 ⊗ 𝐵6 )(𝐵3 ⊗ 𝐵3 ),
+
+then we have
+625
+
+Applied Numerical Mathematics 207 (2025) 621–641
+
+L. Jin, Z. Li, P. Wang et al.
+
+𝑈̃ (𝑝) = 𝑇1 [(𝑇2 𝑈̂ ) ⋅ (𝑇3 𝑈̂ )]𝑝 ,
+
+𝑈̃ (𝑞) = 𝑇1 [𝑇4 𝑈̂ ]𝑞 ,
+
+where 𝐴 ⋅ 𝐵 represents the dot product of two vectors 𝐴 and 𝐵 , [ ⋅ ]𝑝 means taking the power 𝑝 on each entry of the corresponding
+vector, the same deﬁnition is provided below.
+Finally, when dealing with terms involving variable coeﬃcients, we use the LG quadrature formulation (3.6) to discretize them.
+Let Ψ, Ψ1 , and Ψ2 denote the matrix representations of the derivatives of the one-dimensional Legendre basis functions at the LG
+points, and 𝑊 represents the LG quadrature weight matrix. In addition, consider the column vectors 𝑓1 , 𝑃𝑥𝑥 , 𝑃𝑦𝑦 , and 𝑃𝑥𝑦 , where
+2 𝑈 , 𝜕 2 𝑈 and 𝜕 2 𝑈 at two-dimensional LG grid points, respectively.
+each element corresponds to the values of 𝑓 − det(𝐷2 𝑈𝑏 ), 𝜕𝑥𝑥
+𝑏 𝑦𝑦 𝑏
+𝑥𝑦 𝑏
+Then denote
+
+𝑀 = (Ψ𝑊 ) ⊗ (Ψ𝑊 ),
+𝑃1 = Ψ𝑇2 ⊗ Ψ𝑇1 ,
+
+𝑀1 = (Ψ2 𝑊 ) ⊗ (Ψ𝑊 ) + (Ψ𝑊 ) ⊗ (Ψ2 𝑊 ),
+
+𝑃2 = Ψ𝑇1 ⊗ Ψ𝑇2 ,
+
+𝑃3 = Ψ𝑇1 ⊗ Ψ𝑇1 ,
+
+𝑃4 = diag(𝑃𝑥𝑥 )𝑃2 + diag(𝑃𝑦𝑦 )𝑃1 − 2diag(𝑃𝑥𝑦 )𝑃3 ,
+𝑃5 = 𝑃𝑥𝑥 + 𝑃𝑦𝑦 ,
+
+𝑇 = 𝐴 ⊗ 𝐵 + 2𝐶 ⊗ 𝐶 + 𝐵 ⊗ 𝐴,
+
+′
+′
+where 𝐴𝑘𝑗 = (𝜙′′
+, 𝜙′′
+𝑗 ), 𝐵𝑘𝑗 = (𝜙𝑘 , 𝜙𝑗 ), 𝐶𝑘𝑗 = (𝜙𝑘 , 𝜙𝑗 ). The elements are deﬁned as follows,
+𝑘
+
+{
+
+𝐴𝑘𝑗 =
+
+2(2𝑘 + 3)(2𝑗 + 3)(𝑘 + 1)(𝑘 + 2),
+0,
+
+⎧ 2 + 2 ,
+⎪ 2𝑗+1 2𝑗+5
+𝐵𝑘𝑗 = 𝐵𝑗𝑘 = ⎨− 2 ,
+2𝑗+5
+⎪
+⎩0,
+
+𝑘, 𝑗 have the same parity,
+otherwise,
+
+𝑘 = 𝑗,
+𝑘 = 𝑗 + 2,
+otherwise,
+
+and the matrix 𝐶 is a diagonal matrix with 𝐶𝑘𝑘 = 4𝑘 + 6, 𝑘 = 0, 1, ⋯ , 𝑁 − 2.
+By discretizing the spectral format, the Legendre-Galerkin formulation (3.9) is equivalent to the following nonlinear algebraic
+system:
+
+(
+)
+ (𝑈̂ ) ∶= −𝜀𝑇 𝑈̂ + 𝑇1 (𝑇2 𝑈̂ ) ⋅ (𝑇3 𝑈̂ ) − [𝑇4 𝑈̂ ]2 + 𝑇𝐸 − 𝑇𝐹 = 0
+
+(3.16)
+
+where
+
+𝑇𝐸 = 𝑀𝑃4 𝑈̂ ,
+
+𝑇𝐹 = 𝑀𝑓1 + 𝜀𝑀1 𝑃5 .
+
+We can numerically solve the nonlinear algebraic equations (3.16) using the Newton method. And the corresponding Jacobi matrix
+is as follows:
+
+)
+(
+ (𝑈̂ ) = −𝜀𝑇 + 𝑇1 (𝑇2 𝑈̂ ) ⋅ 𝑇3 + (𝑇3 𝑈̂ ) ⋅ 𝑇 4 − 2(𝑇4 𝑈̂ ) ⋅ 𝑇 4 + 𝑀𝑃4 .
+
+(3.17)
+
+3.2. The GLOFs-Galerkin method
+For the numerical approximation of problem with weak singularities, we present the GLOFs-Galerkin method in this subsection.
+The GLOFs proposed by S. Chen and J. Shen, et al. in [13–15], are constructed by applying a suitable logarithmic mapping to the
+Laguerre functions. As noted in [14], the GLOFs are well-suited for the numerical approximation of problem with weak singularity
+at one endpoint, where the solution remains ﬁnite at this point, but its derivatives may be undeﬁned or become inﬁnite. Building
+on the groundwork above, we will introduce the GLOFs-Galerkin method for the numerical approximation solutions to the problem
+(1.1), speciﬁcally tailored to address corner singularities.
+Suppose 𝛼, 𝛽 > −1, 𝜆 ∈ ℝ, for 𝑥 ∈ 𝐼̃ = (0, 1), the GLOFs in [14] are deﬁned as follows:
+(𝛼,𝛽,𝜆)
+𝑆−1
+(𝑥) ≡ 0,
+
+𝛽−𝜆
+(
+)
+𝑆𝑛(𝛼,𝛽,𝜆) (𝑥) = 𝑥 2 ℒ𝑛(𝛼) − (𝛽 + 1) log 𝑥 ,
+
+𝑛 > 0,
+
+(3.18)
+
+where ℒ𝑛𝛼 (𝜉) is the standard classical Laguerre polynomial of degree 𝑛.
+
+In this paper, our intention is to utilize the special case 𝛼 = 𝜆 = 0, as used in [15] for solving the boundary layer problems,
+𝛽
+
+𝑆𝑛(𝛽) (𝑥) = 𝑥 2 ℒ𝑛(0) (−(𝛽 + 1) log 𝑥) ,
+
+𝑛 > 0,
+
+(3.19)
+
+which have the following orthogonality
+1
+
+∫
+
+𝑆𝑛(𝛽) (𝑥)𝑆𝑚(𝛽) (𝑥) 𝑑𝑥 =
+
+0
+𝛾,log 𝑥
+
+𝛿𝑚𝑛
+.
+(𝛽 + 1)
+
+(3.20)
+
+{
+
+}
+
+The space 𝑁
+is deﬁned as the span of functions 𝑥𝛾 , 𝑥𝛾 log 𝑥, 𝑥𝛾 (log 𝑥)2 , ⋯ , 𝑥𝛾 (log 𝑥)𝑁 . Then, the following GLOFs-Gauss
+quadrature holds
+626
+
+

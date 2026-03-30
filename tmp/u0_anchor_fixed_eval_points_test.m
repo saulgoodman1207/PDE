@@ -1,0 +1,16 @@
+function u0_anchor_fixed_eval_points_test()
+% Regression test for per-N evaluation grids in N-sweeps.
+
+    opts = struct( ...
+        'N_values', [20 22 24], ...
+        'p_values', [21 23 25], ...
+        'run_tag', 'tdd_fixed_eval_points_test', ...
+        'show_figures', false);
+
+    result = u0_anchor_monge_ampere_homotopy_demo('paper_example_5_1', opts);
+    eval_points = result.summary_table.EvalPoints;
+
+    expected = arrayfun(@(N) max(121, 6 * N + 1), opts.N_values(:));
+    assert(isequal(eval_points, expected), ...
+        'Expected EvalPoints to vary with N according to max(121, 6*N+1).');
+end

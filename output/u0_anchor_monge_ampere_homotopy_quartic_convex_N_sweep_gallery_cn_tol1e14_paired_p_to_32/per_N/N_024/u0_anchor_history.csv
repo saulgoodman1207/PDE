@@ -1,0 +1,2 @@
+t,ResidualInf,NewtonSteps,GridL2Indicator,FDH1Indicator,FDH2Indicator,JacobianSigmaMin,JacobianCond,HessianLambdaMin,HessianLambdaMax,HessianPSDRatio,HessianIndefRatio
+1,0,0,0.0350470442013107,0.207733496559015,1.99869724219384,1.87290029541882e-06,206387.08970896,-3.60904154489423,6.66444808792124,0.74,0.26

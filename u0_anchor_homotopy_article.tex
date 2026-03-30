@@ -1,0 +1,480 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[a4paper,margin=1in]{geometry}
+\usepackage{fontspec}
+\usepackage{xeCJK}
+\usepackage{amsmath,amssymb,bm}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{hyperref}
+
+\setmainfont{Times New Roman}
+\setCJKmainfont{SimSun}
+\setCJKsansfont{Microsoft YaHei}
+\setmonofont{Consolas}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    urlcolor=blue,
+    citecolor=blue
+}
+
+\title{一种用于 Monge--Amp\`ere 方程的\\\texorpdfstring{$u_0$}{u0} 锚定同伦 Legendre--Galerkin 原型方法}
+\author{Codex 实验说明稿}
+\date{March 21, 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+本文给出一个基于 $u_0$ 锚定同伦与 Legendre--Galerkin 离散的 Monge--Amp\`ere 方程数值原型方法，用于求解二维正方形区域上的 Dirichlet 问题
+\[
+\det(D^2u)=f.
+\]
+与 vanishing moment 路线不同，本文方法不引入四阶正则化项，而是构造参数 $t\in[0,1]$ 的锚定同伦方程
+\[
+t(u-u_0)+(1-t)(\det(D^2u)-f)=0,
+\]
+并令 $t$ 从 $1$ 连续下降到 $0$。当 $t=1$ 时，问题退化为锚定状态 $u=u_0$；当 $t=0$ 时，回到目标 Monge--Amp\`ere 方程。当前实现中，锚定态 $u_0$ 并非由精确解加扰动人工构造，而是通过与边界数据相容的 Poisson 型锚定方程
+\[
+\Delta u_0 = 2\sqrt{f},
+\qquad
+u_0=g \ \text{on }\partial\Omega
+\]
+生成。本文重点说明该算法的设计逻辑、Legendre--Galerkin 离散框架、边界 lifting、Poisson 型锚定态构造、Newton 线性化与凸性控制，并总结当前代码原型适用的函数类型与局限性。现有数值实验表明，该方法对于光滑、严格凸、边界已知且右端非负的问题具有较好的可行性。
+\end{abstract}
+
+\noindent\textbf{关键词：}
+Monge--Amp\`ere 方程；同伦方法；Legendre--Galerkin 方法；边界 lifting；Poisson 锚定；凸性保持
+
+\section{引言}
+Monge--Amp\`ere 方程
+\begin{equation}
+\det(D^2u)=f
+\label{eq:ma}
+\end{equation}
+是典型的全非线性二阶偏微分方程，其数值求解难点主要来自以下几个方面：其一，方程非线性强，Newton 线性化的可行性依赖于较好的初值；其二，正确物理解通常位于凸解分支上，数值过程中需要尽量避免跳到非凸分支；其三，边界条件、离散空间以及非线性项的近似方式会显著影响稳定性。
+
+已有工作中，一类常用思路是先通过 vanishing moment 方法将 \eqref{eq:ma} 正则化为四阶方程，再对正则化问题进行谱 Galerkin 或有限元离散。本文考虑一条不同的思路：保留谱 Galerkin 的空间离散优势，但将连续层面的求解路径改为一个以 $u_0$ 为起点的锚定同伦。这样做的目标是避免引入四阶辅助方程，同时仍然利用 continuation 的思想逐步逼近目标非线性问题。
+
+\section{模型问题与齐次化同伦形式}
+考虑二维正方形区域
+\[
+\Omega=(0,1)^2,
+\]
+以及 Dirichlet 边界条件
+\begin{equation}
+u=g \quad \text{on }\partial\Omega.
+\label{eq:bc}
+\end{equation}
+与直接求解 Monge--Amp\`ere 方程 \eqref{eq:ma} 不同，本文考虑如下锚定同伦族：对于任意固定参数 $t\in[0,1]$，求解
+\begin{equation}
+t(u_t-u_0)+(1-t)(\det(D^2u_t)-f)=0,
+\qquad (x,y)\in\Omega,
+\label{eq:homotopy}
+\end{equation}
+并配以边界条件
+\begin{equation}
+u_t=g \quad \text{on }\partial\Omega.
+\label{eq:bc-t}
+\end{equation}
+当 $t=1$ 时，方程 \eqref{eq:homotopy} 退化为锚定状态 $u_t=u_0$；当 $t=0$ 时，恢复目标 Monge--Amp\`ere 方程。实际计算中，参数 $t$ 取为单调递减序列
+\begin{equation}
+1=t_0>t_1>\cdots>t_K=0,
+\label{eq:t-sequence}
+\end{equation}
+并逐层进行 continuation。该构造的基本思想是：若锚定态 $u_0$ 与目标凸解处于同一分支邻域内，则 $t=t_k$ 层的数值解可以自然地作为 $t=t_{k+1}$ 层的 Newton 初值，从而提高非线性迭代的稳定性。
+
+为了便于后续谱离散，先将非齐次边界条件齐次化。设
+\begin{equation}
+u_t=U_t+U_b,
+\qquad
+u_0=U_0+U_b,
+\label{eq:split}
+\end{equation}
+其中 $U_b$ 为满足 $U_b=g$ 于 $\partial\Omega$ 上的 lifting，$U_t$ 和 $U_0$ 则满足齐次边界条件
+\[
+U_t=U_0=0 \qquad \text{on }\partial\Omega.
+\]
+本文采用与矩形边界数据相容的双线性延拓
+\begin{align}
+U_b(x,y)
+= {} & (1-x)g(0,y)+xg(1,y) \notag \\
+& +(1-y)\bigl(g(x,0)-(1-x)g(0,0)-xg(1,0)\bigr) \notag \\
+& +y\bigl(g(x,1)-(1-x)g(0,1)-xg(1,1)\bigr),
+\label{eq:ub}
+\end{align}
+从而保证四条边界上均有 $U_b=g$。
+
+将分解 \eqref{eq:split} 代入 \eqref{eq:homotopy}，并利用 Hessian 行列式的双线性展开
+\begin{equation}
+\det(D^2(U_t+U_b))
+=
+\det(D^2U_t)+E(U_t,U_b)+\det(D^2U_b),
+\label{eq:det-expand}
+\end{equation}
+其中耦合项 $E(U_t,U_b)$ 定义为
+\begin{equation}
+E(U_t,U_b)
+=
+U_{t,xx}U_{b,yy}+U_{t,yy}U_{b,xx}-2U_{t,xy}U_{b,xy},
+\label{eq:E-phys}
+\end{equation}
+即可得到齐次化后的连续问题：
+\begin{equation}
+t(U_t-U_0)+(1-t)\bigl(\det(D^2U_t)+E(U_t,U_b)\bigr)=\widetilde f_t
+\qquad \text{in }\Omega,
+\label{eq:homotopy-hom}
+\end{equation}
+其中
+\begin{equation}
+\widetilde f_t=(1-t)\bigl(f-\det(D^2U_b)\bigr).
+\label{eq:f-tilde}
+\end{equation}
+
+记
+\[
+V:=H^2(\Omega)\cap H_0^1(\Omega),
+\]
+则相应的变分形式为：对任意固定 $t\in[0,1]$，求 $U_t\in V$，使得
+\begin{equation}
+t(U_t-U_0,v)+(1-t)\bigl(\det(D^2U_t)+E(U_t,U_b),v\bigr)=(\widetilde f_t,v),
+\qquad \forall v\in V.
+\label{eq:weak-cont}
+\end{equation}
+这里 $(\cdot,\cdot)$ 表示 $L^2(\Omega)$ 内积。需要指出的是，式 \eqref{eq:weak-cont} 并未对非线性项作分部积分，而是保持其二阶导数结构，这与后续的 Legendre--Galerkin 投影离散保持一致。
+
+\section{Poisson 型锚定态与参考区域重写}
+\subsection{\texorpdfstring{Poisson 型锚定态 $u_0$}{Poisson 型锚定态 u0}}
+为了使同伦起点 $t=1$ 具有明确且可计算的参考状态，本文不依赖已知精确解构造锚定函数，而是将 $u_0$ 定义为如下 Poisson 型边值问题的解：
+\begin{equation}
+\Delta u_0 = 2\sqrt{f},
+\qquad
+u_0=g \quad \text{on }\partial\Omega.
+\label{eq:u0-phys}
+\end{equation}
+这一选择具有两方面作用：一方面，$u_0$ 与原问题共享相同的 Dirichlet 边界数据；另一方面，$u_0$ 由二阶椭圆型方程产生，通常比任意内部人工扰动更加平滑，从而更适合作为 continuation 的起始态。
+
+将 \eqref{eq:split} 代入 \eqref{eq:u0-phys} 可得其齐次部分 $U_0=u_0-U_b$ 满足
+\begin{equation}
+\Delta U_0 = 2\sqrt{f}-\Delta U_b,
+\qquad
+U_0=0 \quad \text{on }\partial\Omega.
+\label{eq:U0-phys}
+\end{equation}
+因此，锚定态的构造与后续同伦问题共享完全相同的齐次边界框架。本文中的 manufactured solution 仅用于数值误差评估，不参与 \eqref{eq:u0-phys} 的构造。
+
+\subsection{参考区域映射}
+为了应用张量积 Legendre 基函数，引入参考区域
+\[
+\widehat\Omega=(-1,1)^2
+\]
+及线性映射
+\begin{equation}
+x=\frac{\xi+1}{2},
+\qquad
+y=\frac{\eta+1}{2}.
+\label{eq:map}
+\end{equation}
+由链式法则可得
+\begin{equation}
+\partial_{xx}=4\partial_{\xi\xi},
+\qquad
+\partial_{yy}=4\partial_{\eta\eta},
+\qquad
+\partial_{xy}=4\partial_{\xi\eta},
+\label{eq:scaling-second}
+\end{equation}
+从而
+\begin{equation}
+\det(D^2_{x,y}w)=16\,\det(D^2_{\xi,\eta}w)
+\label{eq:det-scaling}
+\end{equation}
+对任意足够光滑的函数 $w$ 成立。于是 \eqref{eq:U0-phys} 在参考区域中可写为
+\begin{equation}
+\partial_{\xi\xi}U_0+\partial_{\eta\eta}U_0
+=
+\frac{1}{2}\sqrt{f}-\bigl(\partial_{\xi\xi}U_b+\partial_{\eta\eta}U_b\bigr),
+\label{eq:U0-ref}
+\end{equation}
+而齐次化同伦问题 \eqref{eq:homotopy-hom} 则化为
+\begin{equation}
+\frac{t}{16}(U_t-U_0)
++(1-t)\bigl(\det(D^2_{\xi,\eta}U_t)+E_{\xi,\eta}(U_t,U_b)\bigr)
+=
+\widetilde f_t^{\,r}
+\qquad \text{in }\widehat\Omega,
+\label{eq:homotopy-ref-hom}
+\end{equation}
+其中
+\begin{equation}
+E_{\xi,\eta}(U_t,U_b)
+=
+U_{t,\xi\xi}U_{b,\eta\eta}+U_{t,\eta\eta}U_{b,\xi\xi}-2U_{t,\xi\eta}U_{b,\xi\eta},
+\label{eq:E-ref}
+\end{equation}
+\begin{equation}
+\widetilde f_t^{\,r}
+=
+\frac{1-t}{16}f-(1-t)\det(D^2_{\xi,\eta}U_b).
+\label{eq:f-ref}
+\end{equation}
+等价地，若直接使用总场 $u_t=U_t+U_b$，则 \eqref{eq:homotopy} 在参考区域上可简化为
+\begin{equation}
+\frac{t}{16}(u_t-u_0)+(1-t)\det(D^2_{\xi,\eta}u_t)=\frac{1-t}{16}f.
+\label{eq:ref}
+\end{equation}
+后续离散组装采用的正是这一与实现最一致的形式。
+
+\section{Legendre--Galerkin 离散}
+\subsection{离散空间与投影形式}
+在参考区间 $(-1,1)$ 上，取满足齐次边界条件的基函数
+\begin{equation}
+\phi_n(\xi)=L_n(\xi)-L_{n+2}(\xi),
+\qquad n=0,1,\dots,N-1,
+\label{eq:phi}
+\end{equation}
+其中 $L_n$ 为 Legendre 多项式。由于 $\phi_n(\pm 1)=0$，故二维张量积空间
+\begin{equation}
+X_N=\mathrm{span}\{\phi_i(\xi)\phi_j(\eta)\}_{i,j=0}^{N-1}
+\label{eq:space}
+\end{equation}
+自然嵌入齐次边界函数空间。设
+\begin{equation}
+U_N(\xi,\eta)=\sum_{i,j=0}^{N-1}U_{ij}\phi_i(\xi)\phi_j(\eta),
+\qquad
+u_N=U_N+U_b.
+\label{eq:UN}
+\end{equation}
+
+再记 $\{(\xi_p,\omega_p)\}_{p=1}^Q$ 为一维 Legendre--Gauss 节点及权重，并引入二维离散内积
+\begin{equation}
+(w,z)_Q=\sum_{p=1}^Q\sum_{q=1}^Q w(\xi_p,\eta_q)z(\xi_p,\eta_q)\omega_p\omega_q.
+\label{eq:quad-inner}
+\end{equation}
+则 Legendre--Galerkin 离散问题可写为：对任意固定 $t\in[0,1]$，求 $U_N(t)\in X_N$，使得
+\begin{equation}
+\frac{t}{16}(u_N-u_0,v_N)_Q+(1-t)(\det(D^2_{\xi,\eta}u_N),v_N)_Q=\frac{1-t}{16}(f,v_N)_Q,
+\qquad \forall v_N\in X_N.
+\label{eq:weak}
+\end{equation}
+式 \eqref{eq:weak} 是连续形式 \eqref{eq:ref} 在谱空间中的离散投影；若采用齐次变量 $U_N$ 表达，则其与 \eqref{eq:homotopy-ref-hom} 完全等价。
+
+\subsection{B-matrix 变换链与离散算子}
+为了将 \eqref{eq:weak} 写成代数方程，引入系数向量
+\[
+\bm{U}=\mathrm{vec}\bigl([U_{ij}]_{i,j=0}^{N-1}\bigr)\in\mathbb{R}^{N^2}.
+\]
+由基函数定义 \eqref{eq:phi} 可知，一维 $\phi$-基系数与截断 Legendre 系数之间满足线性关系
+\begin{equation}
+\widehat{\bm a}=B_3\bm a,
+\label{eq:B3}
+\end{equation}
+其中 $B_3$ 的第 $j$ 列仅在第 $j$ 行和第 $j+2$ 行非零，系数分别为 $1$ 和 $-1$。设
+\[
+P_q=[L_k(\xi_p)]_{p,k},
+\qquad
+\Phi_q=P_qB_3,
+\]
+则 $\Phi_q$ 给出基函数在 Legendre--Gauss 节点上的取值矩阵。于是二维节点值与谱系数的关系可写为
+\begin{equation}
+\bm u^{(q)}=T_0\bm U,
+\qquad
+T_0=\Phi_q\otimes\Phi_q.
+\label{eq:T0}
+\end{equation}
+
+另一方面，令
+\begin{equation}
+P_\phi=B_3^\top B_2B_1,
+\label{eq:Pphi}
+\end{equation}
+其中 $B_1$ 为由 Gauss 求积实现的前向 Legendre 变换，$B_2=\mathrm{diag}(\gamma_k)$，$\gamma_k=2/(2k+1)$ 为 Legendre 正交关系中的质量系数，则由节点值返回 Galerkin 系数空间的离散投影算子为
+\begin{equation}
+T_1=P_\phi\otimes P_\phi.
+\label{eq:T1}
+\end{equation}
+因此，$T_0$ 负责由谱系数生成节点值，$T_1$ 则承担离散内积意义下的投影作用。
+
+为了计算非线性项，需要进一步构造二阶导数算子。利用 Legendre 多项式导数递推关系，可以得到一维导数矩阵 $B_5$ 和 $B_6$，分别将 Legendre 系数映射为二阶导数和一阶导数的 Legendre 系数。相应地，二维张量积算子定义为
+\begin{equation}
+T_2=(P_q\otimes P_q)(I\otimes B_5)(B_3\otimes B_3),
+\label{eq:T2}
+\end{equation}
+\begin{equation}
+T_3=(P_q\otimes P_q)(B_5\otimes I)(B_3\otimes B_3),
+\label{eq:T3}
+\end{equation}
+\begin{equation}
+T_4=(P_q\otimes P_q)(B_6\otimes B_6)(B_3\otimes B_3).
+\label{eq:T4}
+\end{equation}
+若记 lifting 的二阶导数节点值分别为 $\bm u^{(b)}_{\xi\xi}$、$\bm u^{(b)}_{\eta\eta}$ 和 $\bm u^{(b)}_{\xi\eta}$，则总场的 Hessian 分量在所有 quadrature 节点上可写为
+\begin{equation}
+\bm u_{\xi\xi}=T_2\bm U+\bm u^{(b)}_{\xi\xi},
+\qquad
+\bm u_{\eta\eta}=T_3\bm U+\bm u^{(b)}_{\eta\eta},
+\qquad
+\bm u_{\xi\eta}=T_4\bm U+\bm u^{(b)}_{\xi\eta}.
+\label{eq:hessian-discrete}
+\end{equation}
+此外，锚定 Poisson 方程 \eqref{eq:U0-ref} 在同一投影框架下离散为
+\begin{equation}
+L\bm U_0=T_1\bm s,
+\qquad
+L=T_1(T_2+T_3),
+\label{eq:anchor-discrete}
+\end{equation}
+其中 $\bm s$ 为 \eqref{eq:U0-ref} 右端在 quadrature 节点上的取值向量。上式给出了锚定态系数 $\bm U_0$ 的离散定义。
+
+\subsection{离散残差方程}
+由 \eqref{eq:weak} 可知，质量型项与非线性项均先在 quadrature 节点上形成，再投影至 $X_N$ 的系数空间。具体地，质量型残差为
+\begin{equation}
+\bm r_{\mathrm{mass}}
+=
+T_1\bigl(\bm u-\bm u_0\bigr),
+\qquad
+\bm u=T_0\bm U+\bm U_b^{(q)},
+\label{eq:mass-residual}
+\end{equation}
+其中 $\bm U_b^{(q)}$ 为 lifting $U_b$ 的节点值，$\bm u_0$ 为锚定态 $u_0$ 的节点值。
+
+非线性项则由 Hessian 行列式的逐点乘积给出：
+\begin{equation}
+\det(D^2u_N)(\xi_p,\eta_q)
+=
+u_{\xi\xi}(\xi_p,\eta_q)u_{\eta\eta}(\xi_p,\eta_q)-u_{\xi\eta}(\xi_p,\eta_q)^2.
+\label{eq:det-pointwise}
+\end{equation}
+将所有节点值收集成向量，并采用 Hadamard 乘积 $\odot$ 记号，可写成
+\begin{equation}
+N(\bm U)
+=
+T_1\bigl(\bm u_{\xi\xi}\odot\bm u_{\eta\eta}-\bm u_{\xi\eta}\odot\bm u_{\xi\eta}\bigr).
+\label{eq:nonlinear-discrete}
+\end{equation}
+同理，右端项投影为
+\begin{equation}
+\bm F=T_1\bm f_q,
+\qquad
+\bm f_q=\frac{1}{16}\bigl[f(\xi_p,\eta_q)\bigr]_{p,q}.
+\label{eq:F-discrete}
+\end{equation}
+于是，对应于 \eqref{eq:weak} 的离散残差方程可表述为
+\begin{equation}
+R_t(\bm U)
+=
+\frac{t}{16}M(\bm U-\bm U_0)+(1-t)N(\bm U)-(1-t)\bm F,
+\label{eq:residual}
+\end{equation}
+其中
+\begin{equation}
+M=T_1T_0
+\label{eq:mass-matrix}
+\end{equation}
+为质量型矩阵。将 \eqref{eq:mass-residual}--\eqref{eq:F-discrete} 代入 \eqref{eq:residual}，可得到更为展开的表达式
+\begin{equation}
+R_t(\bm U)
+=
+\frac{t}{16}T_1\bigl(T_0\bm U+\bm U_b^{(q)}-\bm u_0\bigr)
++(1-t)T_1\bigl(\bm u_{\xi\xi}\odot\bm u_{\eta\eta}-\bm u_{\xi\eta}^{\odot 2}\bigr)
+-(1-t)T_1\bm f_q.
+\label{eq:residual-expanded}
+\end{equation}
+这就是 MATLAB 原型中残差向量的理论来源。
+
+\section{Newton 线性化与 continuation 过程}
+\subsection{Jacobian 的解析构造}
+设 $\bm U^{(m)}$ 为第 $m$ 次 Newton 迭代的当前近似。Newton 校正量 $\delta\bm U$ 由线性系统
+\begin{equation}
+J_t(\bm U^{(m)})\delta\bm U=-R_t(\bm U^{(m)})
+\label{eq:newton}
+\end{equation}
+确定，其中 Jacobian 矩阵由
+\begin{equation}
+J_t(\bm U)=\frac{t}{16}M+(1-t)J_{\det}(\bm U)
+\label{eq:jac}
+\end{equation}
+给出。关键在于非线性项 $N(\bm U)$ 的导数。
+
+由 \eqref{eq:hessian-discrete} 可知，任意扰动 $\delta\bm U$ 诱导的 Hessian 分量变化满足
+\begin{equation}
+\delta\bm u_{\xi\xi}=T_2\delta\bm U,
+\qquad
+\delta\bm u_{\eta\eta}=T_3\delta\bm U,
+\qquad
+\delta\bm u_{\xi\eta}=T_4\delta\bm U.
+\label{eq:delta-hessian}
+\end{equation}
+另一方面，对 \eqref{eq:det-pointwise} 作一阶变分可得
+\begin{equation}
+\delta\!\bigl(\det(D^2u_N)\bigr)
+=
+\bm u_{\eta\eta}\odot\delta\bm u_{\xi\xi}
++\bm u_{\xi\xi}\odot\delta\bm u_{\eta\eta}
+-2\bm u_{\xi\eta}\odot\delta\bm u_{\xi\eta}.
+\label{eq:det-linearization}
+\end{equation}
+再通过投影算子 $T_1$ 返回残差空间，便得到
+\begin{equation}
+J_{\det}(\bm U)
+=
+T_1\Bigl(
+\mathrm{diag}(\bm u_{\eta\eta})T_2
++\mathrm{diag}(\bm u_{\xi\xi})T_3
+-2\,\mathrm{diag}(\bm u_{\xi\eta})T_4
+\Bigr).
+\label{eq:jac-det}
+\end{equation}
+式 \eqref{eq:jac-det} 表明，本文所用 Jacobian 并非通过有限差分近似获得，而是由 Hessian 行列式的解析线性化直接构造而来。由于这种构造显式保留了非线性项的乘积结构，因此在 continuation 接近困难层时通常比数值差分 Jacobian 更为稳定。
+
+\subsection{层间 continuation 与凸性控制}
+在算法层面，参数序列 \eqref{eq:t-sequence} 诱导了一族由易到难的离散问题。对每一个 $k=0,1,\dots,K$，求解
+\begin{equation}
+R_{t_k}(\bm U^{(k)})=0,
+\label{eq:level-problem}
+\end{equation}
+并将上一层解 $\bm U^{(k)}$ 用作下一层问题 $R_{t_{k+1}}(\bm U)=0$ 的初值。由于 $t$ 逐步减小，离散问题从锚定态约束主导逐渐过渡到 Monge--Amp\`ere 非线性主导，这一过程在数值上扮演了分支跟踪的角色。
+
+需要指出的是，对于 Monge--Amp\`ere 方程，仅靠残差下降并不足以保证迭代始终停留在目标凸解分支附近。因此，在实际计算中，Newton 步接受准则除要求残差下降外，还同时监控 Hessian 的最小特征值、半正定比例以及不定比例等凸性指标；若某一层求解失败，则相应缩小 continuation 步长后重新尝试。虽然这些策略主要属于算法实现层面的稳定化技术，但它们与上述解析 Jacobian 一同决定了原型方法在凸解分支上的可计算性。
+
+\section{当前原型适用的函数类型}
+基于现阶段实现和已完成的实验，本文代码原型当前更适用于以下类型的目标解或右端函数：
+\begin{itemize}[leftmargin=2em]
+\item \textbf{光滑函数：} 目标解至少在区域内部具有较高正则性，适合谱方法逼近；
+\item \textbf{严格凸解：} Hessian 在绝大多数区域内保持正定，这有助于 continuation 路径稳定地停留在正确分支；
+\item \textbf{右端非负：} 当前锚定态依赖 $\sqrt{f}$，因此更适合 $f\ge 0$ 且不会频繁穿过零的情形；实现中用一个很小的下界避免数值上对负值开方；
+\item \textbf{边界已知且可构造 lifting：} 需要能明确给出 Dirichlet 边界值 $g$，以便构造 $U_b$；
+\item \textbf{矩形或规则区域：} 当前代码建立在 $(0,1)^2$ 到 $(-1,1)^2$ 的张量积 Legendre--Galerkin 框架上。
+\end{itemize}
+
+从已测试的 manufactured examples 看，以下两类解都可以稳定求解：
+\begin{enumerate}[leftmargin=2em]
+\item 多项式凸解
+\[
+u_{\mathrm{exact}}(x,y)=\frac{x^2+y^2}{2}+x^4+y^4;
+\]
+\item 指数型光滑凸解
+\[
+u_{\mathrm{exact}}(x,y)=\exp\!\left(\frac{x^2+y^2}{2}\right).
+\]
+\end{enumerate}
+
+\section{局限性与后续改进方向}
+尽管该方法对若干光滑凸解表现良好，但目前仍存在明显局限：
+\begin{itemize}[leftmargin=2em]
+\item 目前主要是 \textbf{manufactured-solution 原型}，即通过已知 $u_{\mathrm{exact}}$ 构造 $f$ 与边界值；
+\item 对低正则解、尖角奇异解、弱凸甚至非凸解，尚未经过系统检验；
+\item 当前边界处理依赖简单的 lifting 构造，对复杂几何区域尚不适用；
+\item 当前锚定态采用 $\Delta u_0=2\sqrt{f}$ 这一经验性设计，是否对更广泛问题族都足够合适，仍需进一步评估；
+\item continuation 参数、步长缩放以及凸性接受阈值仍需要进一步自适应设计；
+\item 真正面向未知精确解的问题时，需要引入更完备的后验误差估计与停止准则。
+\end{itemize}
+
+因此，这份代码更适合被视为一种具有一定通用性的研究型原型，而不是已经完全成熟的黑箱求解器。
+
+\section{结论}
+本文总结了一种面向 Monge--Amp\`ere 方程的 $u_0$ 锚定同伦 Legendre--Galerkin 方法。与四阶正则化路线不同，该方法直接在原方程与锚定状态之间构造同伦，通过 continuation 与 Newton 迭代逐层逼近目标非线性问题。当前实现的关键在于三点：一是利用与边界数据相容的 Poisson 型方程生成锚定态 $u_0$；二是通过边界 lifting 将非齐次 Dirichlet 条件转化为齐次问题；三是在 continuation 过程中同时使用解析 Jacobian 与凸性约束来稳定 Newton 迭代。现有实验表明，该原型对二维正方形区域上的光滑、严格凸、右端非负问题具有良好的可行性，并可作为后续研究更一般情形的基础。
+
+\end{document}

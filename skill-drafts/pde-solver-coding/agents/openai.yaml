@@ -1,0 +1,4 @@
+interface:
+  display_name: "PDE Solver Coding"
+  short_description: "Write and verify numerical PDE code with spectral and finite-difference methods"
+  default_prompt: "Write or debug numerical PDE code with clear discretization choices, explicit boundary treatment, and a concrete verification plan."

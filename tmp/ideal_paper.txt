@@ -1,0 +1,1656 @@
+                                                         Appl. Numer. Math. 207 (2025) 621–641
+
+
+                                                       Contents lists available at ScienceDirect
+
+
+                                            Applied Numerical Mathematics
+                                             journal homepage: www.elsevier.com/locate/apnum
+
+
+Research Paper
+
+Spectral-Galerkin methods for the fully nonlinear
+Monge-Ampère equation ✩
+Lixiang Jin, Zhaoxiang Li ∗ , Peipei Wang, Lijun Yi
+Department of Mathematics, Shanghai Normal University, Shanghai, 200234, PR China
+
+
+
+
+A R T I C L E            I N F O                      A B S T R A C T
+
+MSC:                                                  In this paper, we develop two numerical methods, the Legendre-Galerkin method and the
+primary 65N35, 65N12, 65N15, 35J96                    generalized Log orthogonal functions Galerkin method for numerically solving the fully nonlinear
+                                                      Monge-Ampère equation. Both methods are constructed based on the vanishing moment approach.
+Keywords:                                             To address both solution stability and computational eﬃciency, we propose a multiple-level
+Monge-Ampère equation
+                                                      framework for resolving discretization schemes. The mathematical justiﬁcations of the new
+Legendre-Galerkin method
+                                                      approaches and the error estimates for the Legendre-Galerkin method are established. Numerical
+Vanishing moment method
+Error estimate                                        experiments validate the accuracy of our methods, and a comparative experiment demonstrates
+GLOFs-Galerkin scheme                                 the advantage of Log orthogonal functions for problems with corner singularities. The results
+                                                      highlight that our methods have high-order accuracy and small computational cost.
+
+
+
+
+1. Introduction
+
+
+   This paper concerns the numerical solution provided by the Legendre-Galerkin and the generalized Log orthogonal functions
+(GLOFs)-Galerkin methods for the fully nonlinear Monge-Ampère equation with Dirichlet boundary condition,
+        {
+         det(𝐷2 𝑢)(𝑥, 𝑦) = 𝑓 (𝑥, 𝑦),          (𝑥, 𝑦) ∈ Ω,
+                                                                                                                                                (1.1)
+          𝑢(𝑥, 𝑦) = 𝑔(𝑥, 𝑦),                (𝑥, 𝑦) ∈ 𝜕Ω,
+
+where Ω ∈ ℝ2 is a bounded convex domain, 𝑓 is a strictly positive function on Ω, and
+
+                      𝜕 2 𝑢 𝜕 2 𝑢 ( 𝜕 2 𝑢 )2
+        det(𝐷2 𝑢) =              −
+                      𝜕𝑥2 𝜕𝑦2      𝜕𝑥𝜕𝑦
+denotes the determinant of the Hessian matrix 𝐷2 𝑢. As previously discussed in [33], the solution of (1.1) is unique only in the cone
+of convex functions. The problem is uniformly elliptic with respect to 𝑢 if and only if 𝐷2 𝑢 is a positive deﬁnite matrix in Ω, which
+implies 𝑢 is locally uniformly convex. And it is degenerate elliptic if and only if 𝐷2 𝑢 is a semi-positive deﬁnite matrix in Ω, implying
+𝑢 is locally convex [30,47].
+
+
+ ✩ The work was partially supported by the NNSF of China (No. 12271366, 11871043, 12171322), the NSF of Shanghai, China (No. 22ZR1445500, 21ZR1447200)
+
+and the Science and Technology Innovation Plan of Shanghai (No. 23JC1403200).
+ * Corresponding author.
+    E-mail address: zxli@shnu.edu.cn (Z. Li).
+
+https://doi.org/10.1016/j.apnum.2024.09.028
+Received 2 February 2024; Received in revised form 3 September 2024; Accepted 28 September 2024
+Available online 3 October 2024
+0168-9274/© 2024 IMACS. Published by Elsevier B.V. All rights are reserved, including those for text and data mining, AI training, and similar
+technologies.
+L. Jin, Z. Li, P. Wang et al.                                                               Applied Numerical Mathematics 207 (2025) 621–641
+
+
+    The Monge-Ampère equation is a well-known fully nonlinear partial diﬀerential equation and in a variety of broad applications,
+including diﬀerential geometry, meteorology, cosmology, economics, and optimal mass transportation problems [4,10,18,26,35].
+Due to its importance in applied science and the challenges stemming from the full nonlinearity, the convex constraint and the low
+regularity of the solutions, there is a growing interest in applying eﬃcient and accurate numerical methods to solve this problem.
+    For smooth solutions of the problem (1.1), many approaches can lead to numerical methods that converge in practice [6,8,9,16,37,
+38,41,46]. Such as in [17], Dean and Glowinski used mixed ﬁnite element method to solve the saddle-point problem, transformed by
+a well-chosen augmented Lagrangian approach. Many researchers employed iterative algorithms to obtain the numerical solution of
+the problem (1.1). In [39], the researchers considered some multiscale radial basis function collocation methods, such as the cascadic
+meshfree method, the stationary multilevel method and the hierarchical radial basis function method, for solving the two-dimensional
+Monge-Ampère equation with Dirichlet boundary condition. In [5], the authors implemented the cascadic iterative algorithm and
+developed the discretization of the meshless generalized ﬁnite diﬀerence method to numerically solve the problem (1.1). In [36], the
+authors obtained the numerical solution by developing a trivariate spline collocation approach to solve iterative Poisson equations.
+They employed an averaged algorithm to ensure the convergence of their iterations.
+    For weak solutions of the problem (1.1), such as viscosity and Aleksandrov solutions, numerous numerical methods have been
+developed to capture and analyze these weak solutions [34]. In [42], Oliker and Prussner proposed a special discretization method
+for the equation based on its geometric interpretation. This method is speciﬁcally designed to approximate non-smooth Alexandrov
+solutions, where the right-hand side is a sum of Dirac measures. In [27], Froese constructed a wide stencil ﬁnite diﬀerence scheme for
+the Monge-Ampère equation that converges to the viscosity solution. Then, Froese and Oberman [28] devised a hybrid discretization
+approach for the problem (1.1), taking advantage of the optimal features of both natural discretization and monotone discretization.
+In [1], Awanou oﬀered numerical evidence of convergence for nonsmooth solutions employing a time-marching method. In [2],
+the author presented a theory explaining why standard discretizations exhibit numerical convergence for Aleksandrov solutions of
+the Monge-Ampère equation. In [20,22], Feng and Neilan presented the vanishing moment method to compute moment solutions,
+providing an approximation to the viscosity solutions of the problem (1.1) through a quasilinear fourth-order partial diﬀerential
+equation (PDE). Building on this concept, Feng and his collaborators developed a series of ﬁnite element methods in [12,19,21,
+24,40]. These methods encompassed 𝐶 0 penalty method, discontinuous Galerkin (DG) method, mixed ﬁnite element method, and
+more. Recently, in [29], the researchers proposed a regularization of the Monge-Ampère equation in planar convex domains through
+uniformly elliptic Hamilton-Jacobi Bellman equations, eliminating the limitation imposed by convexity constraints.
+    However, from the literature review, it appears that there has been limited research on the application of the spectral methods for
+solving the fully nonlinear Monge-Ampère equation, particularly for solutions with weak singularities. Therefore, it is necessary to
+develop eﬃcient and highly accurate numerical algorithms for these equations. In this paper, based on the vanishing moment method,
+we develop the Legendre-Galerkin method with 𝐿2 -projection to numerically solve the fully nonlinear Monge-Ampère equation (1.1).
+It oﬀers high accuracy, and the computational cost is relatively small compared to other methods. However, eﬀectively managing
+the singularities of equations has consistently presented a signiﬁcant challenge. Inspired by Chen and Shen [13–15], we present
+the GLOFs-Galerkin method for the numerical approximation of problem (1.1) with corner singularities. Considering both solution
+stability and computational eﬃciency, we design a multiple-level framework for resolving discretization schemes. Several numerical
+examples are provided to show the eﬃciency of our proposed methods. The main contributions and remarkable features of this study
+are summarized as follows.
+
+   • Based on the vanishing moment method, we propose the Legendre-Galerkin method with 𝐿2 -projection to numerically solve the
+     fully nonlinear Monge-Ampère equation in two dimensional setting with the Dirichlet boundary conditions.
+   • When dealing with singular solutions, we present the GLOFs-Galerkin method for the numerical approximation solution of
+     problem (1.1) with corner singularities.
+   • To address both solution stability and computational eﬃciency, we propose a multiple-level framework for resolving discretiza-
+     tion schemes.
+   • We conduct a convergence analysis of the Legendre-Galerkin method with 𝐿2 -projection, discussing error estimates under 𝐻 1 -,
+     𝐻 2 -, and 𝐿2 -norms, which yield optimal results.
+
+    This paper is organized as follows: In Section 2, we provide a concise introduction to the vanishing moment method and derive
+its Galerkin formulation. In Section 3, based on the vanishing moment method, we establish the Legendre- and GLOFs-Galerkin
+formulations for the fourth-order quasilinear equation and propose a multiple-level framework for solving discretization schemes. In
+Section 4, we present the convergence analysis for the Legendre-Galerkin method. In Section 5, we provide numerical examples for
+both smooth and non-smooth solutions to verify the eﬀectiveness of the Legendre- and GLOFs-Galerkin methods. Finally, we make
+some concluding observations.
+
+
+2. The vanishing moment method and the variational formulation of the given equation
+
+
+   In this section, we ﬁrst provide a concise introduction to the vanishing moment method, as proposed in [20]. By adding a higher-
+order perturbation, the vanishing moment method eﬀectively regularizes the problem at the PDE level, resulting in a fourth-order
+quasilinear problem associated with the Monge-Ampère equation,
+
+                                                                 622
+L. Jin, Z. Li, P. Wang et al.                                                                                   Applied Numerical Mathematics 207 (2025) 621–641
+
+         ⎧−𝜀Δ2 𝑢𝜀 (𝑥, 𝑦) + det(𝐷2 𝑢𝜀 )(𝑥, 𝑦) = 𝑓 (𝑥, 𝑦),                 (𝑥, 𝑦) ∈ Ω,
+         ⎪ 𝜀
+         ⎨𝑢 (𝑥, 𝑦) = 𝑔(𝑥, 𝑦),      (𝑥, 𝑦) ∈ 𝜕Ω,                                                                                                           (2.1)
+         ⎪Δ𝑢𝜀 (𝑥, 𝑦) = 𝜀,       (𝑥, 𝑦) ∈ 𝜕Ω.
+         ⎩
+    For the 𝑛-dimensional radially symmetric case, Feng and Neilan demonstrated in [23,25] that 𝑢𝜀 converges uniformly and com-
+pactly to the unique convex viscosity solution of the Dirichlet Monge-Ampère equation (1.1). Although there is no theoretical
+foundation for its convergence in other cases, the vanishing moment method has been observed to work quite well in practice.
+As the parameter 𝜀 → 0+ , the fourth-order quasilinear equation (2.1) can be used to approximate the viscosity solution of the Monge-
+Ampère equation (1.1) with the Dirichlet boundary condition. However, introducing any additional boundary condition inherently
+gives rise to a “boundary layer” within both the physical and mathematical domains. Hence, it is advisable to opt for a boundary con-
+dition that minimizes this boundary layer. As shown in [20], the impact of the boundary layer in (2.1) is duly noted and considered
+feasible.
+    To facilitate the more convenient selection of orthogonal basis functions, we transform inhomogeneous boundary conditions of the
+equation (2.1) into a homogeneous form. Inspired by [44], we design a decomposition 𝑢𝜀 = 𝑈 𝜀 + 𝑈𝑏 for the solution of the equation
+(2.1), where 𝑈 𝜀 satisﬁes the following equation
+
+         ⎧−𝜀Δ2 𝑈 𝜀 (𝑥, 𝑦) + det(𝐷2 𝑈 𝜀 )(𝑥, 𝑦) + 𝐸(𝑈 𝜀 , 𝑈𝑏 )(𝑥, 𝑦) = 𝑓̃(𝑥, 𝑦),                   (𝑥, 𝑦) ∈ Ω,
+         ⎪ 𝜀
+         ⎨𝑈 (𝑥, 𝑦) = 0,          (𝑥, 𝑦) ∈ 𝜕Ω,                                                                                                             (2.2)
+         ⎪Δ𝑈 𝜀 (𝑥, 𝑦) = 𝜀 − Δ𝑈 (𝑥, 𝑦),       (𝑥, 𝑦) ∈ 𝜕Ω,
+         ⎩                     𝑏
+
+where
+                 𝑓̃(𝑥, 𝑦) = 𝑓 (𝑥, 𝑦) − det(𝐷2 𝑈𝑏 )(𝑥, 𝑦) + 𝜀Δ2 𝑈𝑏 (𝑥, 𝑦),
+                            𝜕 2 𝑈𝑏 𝜕 2 𝑈 𝜀       𝜕 2 𝑈𝑏 𝜕 2 𝑈 𝜀        𝜕 2 𝑈𝑏 𝜕 2 𝑈 𝜀
+         𝐸(𝑈 𝜀 , 𝑈𝑏 ) =                      +                    −2                  .
+                            𝜕𝑥2     𝜕𝑦2          𝜕𝑦2      𝜕𝑥2          𝜕𝑥𝜕𝑦 𝜕𝑥𝜕𝑦
+    For simplicity, we take Ω = [𝑎, 𝑏] × [𝑐, 𝑑], setting
+                       𝑏−𝑥 1         𝑑 −𝑦 ( 2        𝑏−𝑥 1         𝑥−𝑎 1
+                                                                              )
+         𝑈𝑏 (𝑥, 𝑦) =        𝑔− (𝑦) +        𝑔− (𝑥) −      𝑔− (𝑐) −      𝑔+ (𝑐)
+                       𝑏−𝑎           𝑑 −𝑐            𝑏−𝑎           𝑏−𝑎
+                                  𝑦−𝑐 ( 2                                  )                                                                              (2.3)
+                     𝑥−𝑎 1                        𝑏−𝑥 1          𝑥−𝑎 1
+                   +     𝑔+ (𝑦) +       𝑔+ (𝑥) −      𝑔− (𝑑) −       𝑔+ (𝑑) ,
+                     𝑏−𝑎          𝑑 −𝑐            𝑏−𝑎            𝑏−𝑎
+where
+
+         𝑔−1 (𝑦) = 𝑔(𝑎, 𝑦),       𝑔+1 (𝑦) = 𝑔(𝑏, 𝑦),      𝑔−2 (𝑥) = 𝑔(𝑥, 𝑐),         𝑔+2 (𝑥) = 𝑔(𝑥, 𝑑).
+   After applying the linear transformation, the inhomogeneous boundary has been eﬀectively converted into a homogeneous bound-
+ary. A variational formulation of equation (2.2) is to seek solution 𝑈 𝜀 ∈ 𝐻 2 (Ω) ∩ 𝐻01 (Ω), such that
+                        (               ) (               )
+         −𝜀(Δ𝑈 𝜀 , Δ𝑣) + det(𝐷2 𝑈 𝜀 ), 𝑣 + 𝐸(𝑈 𝜀 , 𝑈𝑏 ), 𝑣 = 𝐹 (𝑣), ∀𝑣 ∈ 𝐻 2 (Ω) ∩ 𝐻01 (Ω),                                                               (2.4)
+where
+                (                  )                     𝜕𝑣
+         𝐹 (𝑣) = 𝑓 − det(𝐷2 𝑈𝑏 ), 𝑣 + 𝜀(Δ𝑈𝑏 , Δ𝑣) − (𝜀2 , )𝜕Ω .
+                                                         𝜕𝑛
+
+3. Spectral-Galerkin methods and a multiple-level framework for solving discretization schemes
+
+   In this section, we will respectively establish the Legendre- and GLOFs-Galerkin formulations for the fourth-order quasilinear
+equation (2.2), and propose a multiple-level framework for solving discretization schemes.
+
+3.1. Legendre-Galerkin method with 𝐿2 -projection
+
+    The Legendre polynomials are an important special case of the Jacobi polynomials with the uniform weight function 𝜔(𝑥) ≡ 1.
+Let 𝐿𝑛 (𝑥) represent the Legendre polynomials of degree 𝑛, and denote 𝑁 as the set of all Legendre polynomials of degree at most
+𝑁 . We present below a compilation of essential formulas and properties [11,31,45] required in this paper.
+    Firstly, the Legendre polynomials 𝐿𝑛 (𝑥) satisfy the orthogonality relation over the interval [−1, 1],
+             1
+                                                            2
+                 𝐿𝑛 (𝑥)𝐿𝑚 (𝑥)𝑑𝑥 = 𝛾𝑛 𝛿𝑚𝑛 ,         𝛾𝑛 =          ,                                                                                        (3.1)
+         ∫                                                2𝑛 + 1
+         −1
+
+and the three-term recurrence relation
+
+         (𝑛 + 1)𝐿𝑛+1 (𝑥) = (2𝑛 + 1)𝑥𝐿𝑛 (𝑥) − 𝑛𝐿𝑛−1 (𝑥),                     𝑛 ⩾ 1,                                                                        (3.2)
+
+                                                                                           623
+L. Jin, Z. Li, P. Wang et al.                                                                     Applied Numerical Mathematics 207 (2025) 621–641
+
+
+where 𝐿0 (𝑥) = 1, 𝐿1 (𝑥) = 𝑥.
+  Additionally, the following derivative recurrence relations hold
+                           𝑛−1
+                           ∑
+         𝐿′𝑛 (𝑥) =               (2𝑘 + 1)𝐿𝑘 (𝑥),                                                                                            (3.3)
+                         𝑘=0
+                       𝑘+𝑛,𝑜𝑑𝑑
+         (2𝑛 + 1)𝐿𝑛 (𝑥) = 𝐿′𝑛+1 (𝑥) − 𝐿′𝑛−1 (𝑥),                 𝑛 ≥ 1,                                                                     (3.4)
+                           𝑛−2
+                           ∑           1
+         𝐿′′
+          𝑛 (𝑥) =                  (𝑘 + )(𝑛(𝑛 + 1) − 𝑘(𝑘 + 1))𝐿𝑘 (𝑥).                                                                       (3.5)
+                         𝑘=0
+                                       2
+                       𝑘+𝑛,𝑒𝑣𝑒𝑛
+
+    Denoting {𝑥𝑗 , 𝜔𝑗 }𝑁
+                       𝑗=0
+                           as the set of Legendre-Gauss (LG) nodes and weights, the expression relating to Legendre-Gauss integration
+is precisely established as follows:
+             1
+                                    𝑁
+                                    ∑
+                 𝑓 (𝑥)𝑔(𝑥) 𝑑𝑥 =           𝑓 (𝑥𝑗 )𝑔(𝑥𝑗 )𝜔𝑗 ,      ∀𝑓 ⋅ 𝑔 ∈ 2𝑁+1 .                                                           (3.6)
+         ∫
+                                    𝑗=0
+         −1
+
+   Furthermore, since the Lagrange interpolation polynomial 𝑁 𝑢 relative to the LG points also belongs to 𝑁 , the backward discrete
+Legendre transform holds
+                                       𝑁
+                                       ∑
+         𝑢(𝑥𝑗 ) = (𝑁 𝑢)(𝑥𝑗 ) =              𝑢̃ 𝑛 𝐿𝑛 (𝑥𝑗 ),    0 ⩽ 𝑗 ⩽ 𝑁.                                                                   (3.7)
+                                       𝑛=0
+
+And the forward discrete Legendre transform
+                       𝑁
+                   1 ∑
+         𝑢̃ 𝑛 =           𝑢(𝑥𝑗 )𝐿𝑛 (𝑥𝑗 )𝜔𝑗 ,        0≤𝑛≤𝑁                                                                                   (3.8)
+                   𝛾𝑛 𝑗=0
+
+can be obtained by (3.1).
+    Through a linear transformation, any bounded interval [𝑎, 𝑏] can be readily mapped to a standard interval [−1, 1]. Hence, for
+the sake of facilitating the construction and analysis of the Legendre-Galerkin method, we make the convenient assumption that the
+interval 𝐼 is set to [−1, 1], and the domain Ω is deﬁned as Ω = 𝐼 2 .
+    The approximation space is then deﬁned as follows:
+
+         𝑋𝑁
+          0
+            (𝐼) = {𝑣 ∈ 𝑁 (𝐼) ∶ 𝑣(±1) = 0},                     𝑋𝑁
+                                                                 0
+                                                                   (Ω) = 𝑋𝑁
+                                                                          0
+                                                                            (𝐼) ⊗ 𝑋𝑁
+                                                                                   0
+                                                                                     (𝐼).
+                                                                         𝜀 ∈ 𝑋 0 (Ω) such that for any 𝑣 ∈ 𝑋 0 (Ω),
+    And the Legendre-Galerkin approximation for problem (2.2) is to ﬁnd 𝑈𝑁    𝑁                         𝑁   𝑁
+           (  𝜀
+                     ) (        𝜀
+                                       ) (   𝜀
+                                                         )
+         −𝜀 Δ𝑈𝑁 , Δ𝑣𝑁 + det(𝐷2 𝑈𝑁 ), 𝑣𝑁 + 𝐸(𝑈𝑁 , 𝑈𝑏 ), 𝑣𝑁 = 𝐹 (𝑣𝑁 ).                                                                        (3.9)
+   Subsequently, we proceed with the construction of the matrix form for the spectral formulation (3.9). Deﬁne the two-dimensional
+Legendre basis functions as Φ𝑛𝑚 (𝑥, 𝑦) = 𝜙𝑛 (𝑥)𝜙𝑚 (𝑦), where 𝜙𝑛 (𝑥) = 𝐿𝑛 (𝑥) − 𝐿𝑛+2 (𝑥), 𝑛 = 0, ⋯ , 𝑁 − 2. The functions 𝜙𝑚 (𝑦) and 𝜙𝑛 (𝑥)
+share identical deﬁnitions. It is easy to check that
+             {          }𝑁−2
+         span Φ𝑛𝑚 (𝑥, 𝑦) 𝑛,𝑚=0 ⊂ 𝑋𝑁
+                                  0
+                                    (Ω).
+Then the solution 𝑈𝑁  𝜀 (𝑥, 𝑦) can be expressed as a linear combination of basis functions. By rearranging the coeﬃcients, we can
+
+establish the following relationship
+                            𝑁−2
+                            ∑                                 𝑁
+                                                              ∑
+          𝜀
+         𝑈𝑁 (𝑥, 𝑦) =               𝑈̂ 𝑛𝑚 𝜙𝑛 (𝑥)𝜙𝑚 (𝑦) =               𝑈̃ 𝑛𝑚 𝐿𝑛 (𝑥)𝐿𝑚 (𝑦),                                                 (3.10)
+                           𝑛,𝑚=0                              𝑛,𝑚=0
+
+where {𝑈̂ 𝑛𝑚 }𝑁−2
+              𝑛,𝑚=0
+                    and {𝑈̃ 𝑛𝑚 }𝑁
+                                𝑛,𝑚=0
+                                      are the unknown coeﬃcients.
+                                                                                               ̃ 𝑁,𝑝 ∶ 𝐶(Ω) → 𝑁 (Ω). This projection
+    To handle the nonlinear terms, inspired by [48], we introduce an 𝐿2 -projection denoted as Π
+is deﬁned for any 𝑢(𝑥, 𝑦) ∈ 𝐶(Ω), such that
+                             𝑁
+                             ∑
+              (          )
+         ̃ 𝑁,𝑝 (𝑢(𝑥, 𝑦))𝑝 ∶=
+         Π                     𝑢̃ 𝑝𝑛𝑚 𝐿𝑛 (𝑥)𝐿𝑚 (𝑦).                                                                                       (3.11)
+                                       𝑛,𝑚=0
+
+                                           ̃ 𝑁,𝑝 , the fully nonlinear term (𝜕 2 𝑈 𝜀 𝜕 2 𝑈 𝜀 )𝑝 is transformed into the following expression
+Under the eﬀect of the projection operator Π                                  𝑥𝑥 𝑁 𝑦𝑦 𝑁
+
+                                     𝑁
+              (                   ) ∑
+         ̃ 𝑁,𝑝 (𝜕 2 𝑈 𝜀 𝜕 2 𝑈 𝜀 )𝑝 =
+         Π       𝑥𝑥 𝑁 𝑦𝑦 𝑁             𝑈̃ 𝑛𝑚
+                                          (𝑝)
+                                              𝐿𝑛 (𝑥)𝐿𝑚 (𝑦),                                                                               (3.12)
+                                                𝑛,𝑚=0
+
+                                                                                            624
+L. Jin, Z. Li, P. Wang et al.                                                                                      Applied Numerical Mathematics 207 (2025) 621–641
+
+      2 𝑈 𝜀 )𝑞 is transformed into
+and (𝜕𝑥𝑦 𝑁
+
+                             𝑁
+              (           ) ∑
+         ̃ 𝑁,𝑞 (𝜕 2 𝑈 𝜀 )𝑞 =
+         Π       𝑥𝑦 𝑁          𝑈̃ 𝑛𝑚
+                                  (𝑞)
+                                      𝐿𝑛 (𝑥)𝐿𝑚 (𝑦).                                                                                                        (3.13)
+                                        𝑛,𝑚=0
+                                                                                                          𝜀 , then we have
+    Since the interpolation of the polynomial is still itself, considering the Lagrange interpolation of 𝑈𝑁
+
+                          𝑁
+                          ∑
+          𝜀
+         𝑈𝑁 (𝑥, 𝑦) =              𝑈𝑛𝑚 𝑙𝑛 (𝑥)𝑙𝑚 (𝑦),                                                                                                        (3.14)
+                          𝑛,𝑚=0
+
+where {𝑙𝑛 (𝑥)}𝑁
+              𝑛=0
+                  are the Lagrange basis polynomials on LG points {𝑥𝑗 }𝑁
+                                                                       𝑗=0
+                                                                           , the general expression of 𝑙𝑛 (𝑥) is given by
+
+                          ∏        𝑥 − 𝑥𝑗
+         𝑙𝑛 (𝑥) =                               ,   0 ≤ 𝑛 ≤ 𝑁.
+                    0⩽𝑗⩽𝑁,𝑛≠𝑗
+                                   𝑥𝑛 − 𝑥𝑗
+
+It follows that 𝑈𝑛𝑚 = 𝑈𝑁𝜀 (𝑥 , 𝑦 ) for each 𝑛, 𝑚 = 0, 1, ⋯ , 𝑁 . Utilizing the derivative recurrence relations (3.4) and (3.5), we can rewrite
+                            𝑛 𝑚
+                       𝜀              𝜀 (𝑥, 𝑦) and 𝜕 𝑈 𝜀 (𝑥, 𝑦) as
+their derivatives 𝜕𝑥𝑥 𝑈𝑁 (𝑥, 𝑦), 𝜕𝑦𝑦 𝑈𝑁             𝑥𝑦 𝑁
+
+                                 𝑁
+                                 ∑
+              𝜀
+         𝜕𝑥𝑥 𝑈𝑁 (𝑥, 𝑦) =                𝑈̃ 1,𝑚𝑛
+                                           ′′
+                                                𝐿𝑛 (𝑥)𝐿𝑚 (𝑦),                                                                                             (3.15a)
+                                𝑛,𝑚=0
+                                𝑁
+                                ∑
+              𝜀
+         𝜕𝑥𝑦 𝑈𝑁 (𝑥, 𝑦) =                𝑈̃ 2,𝑚𝑛
+                                           ′′
+                                                𝐿𝑛 (𝑥)𝐿𝑚 (𝑦),                                                                                             (3.15b)
+                                𝑛,𝑚=0
+                                𝑁
+                                ∑
+              𝜀
+         𝜕𝑦𝑦 𝑈𝑁 (𝑥, 𝑦) =                𝑈̃ 3,𝑚𝑛
+                                           ′′
+                                                𝐿𝑛 (𝑥)𝐿𝑚 (𝑦).                                                                                             (3.15c)
+                                𝑛,𝑚=0
+
+    Moreover, we expand the unknown coeﬃcients of equation (3.10) to (3.15) into the following vectors
+
+         𝑈̂ = (𝑈̂ 00 , ⋯ , 𝑈̂ (𝑁−2)(𝑁−2) )𝑇 ,              𝑈̄ = (𝑈̄ 00 , ⋯ , 𝑈̄ (𝑁−2)(𝑁−2) )𝑇 ,
+         𝑈 = (𝑈00 , ⋯ , 𝑈𝑁𝑁 )𝑇 ,                𝑈̃ = (𝑈̃ 00 , ⋯ , 𝑈̃ 𝑁𝑁 )𝑇 ,   𝑈̃ (𝑝) = (𝑈̃ 00
+                                                                                            (𝑝)
+                                                                                                , ⋯ , 𝑈̃ 𝑁𝑁
+                                                                                                         (𝑝) 𝑇
+                                                                                                             ) ,
+      𝑈̃ (𝑞) = (𝑈̃ 00
+                   (𝑞)
+                       , ⋯ , 𝑈̃ 𝑁𝑁
+                                (𝑞) 𝑇
+                                    ) ,   𝑈̃ 𝑖′′ = (𝑈̃ 𝑖,00
+                                                       ′′
+                                                            , ⋯ , 𝑈̃ 𝑖,𝑁𝑁
+                                                                     ′′
+                                                                          )𝑇 , 𝑖 = 1, 2, 3,
+              ( 𝜀                       )
+where 𝑈̄ 𝑘𝑗 = 𝑈𝑁 (𝑥, 𝑦), 𝜙𝑗 (𝑥)𝜙𝑘 (𝑦) . In accordance with the properties (3.1) to (3.8), we have the following relationships between
+the unknown coeﬃcients:
+         𝑈̃ = 𝐵1 ⊗ 𝐵1 𝑈 ,                𝑈̄ = (𝐵3𝑇 ⊗ 𝐵3𝑇 )(𝐵2 ⊗ 𝐵2 )𝑈̂ ,             𝑈 = 𝐵4 ⊗ 𝐵4 𝑈̃ ,
+         𝑈̃ = 𝐵3 ⊗ 𝐵3 𝑈̂ ,          𝑈̃ 1′′ = 𝐵5 ⊗ 𝐼 𝑈̃ ,     𝑈̃ 2′′ = 𝐵6 ⊗ 𝐵6 𝑈̃ ,    𝑈̃ 3′′ = 𝐼 ⊗ 𝐵5 𝑈̃ ,
+
+where 𝐼 is an identity matrix, ⊗ denotes the Kronecker product, 𝐵1 is the forward Legendre transform, 𝐵2 = (𝑏2𝑘𝑗 )𝑁
+                                                                                                                  𝑘,𝑗=0
+                                                                                                                        , 𝐵3 =
+(𝑏3𝑘𝑗 )0≤𝑘≤𝑁,0≤𝑗≤𝑁−2 , 𝐵4 is the backward Legendre transform, 𝐵5 = (𝑏5𝑘𝑗 )𝑁
+                                                                          𝑘,𝑗=0
+                                                                                and 𝐵6 = (𝑏6𝑘𝑗 )𝑁
+                                                                                                𝑘,𝑗=0
+                                                                                                      . Their entries are deﬁned by the
+following expressions
+                  {     1
+                      𝑘+1∕2
+                            ,                   𝑘 = 𝑗,
+         𝑏2𝑘𝑗 =
+                     0,                         otherwise,
+                  ⎧1,     𝑘 = 𝑗 and 0 ≤ 𝑘, 𝑗 ≤ 𝑁 − 2,
+                ⎪
+         𝑏3𝑘𝑗 = ⎨−1,  𝑘 = 𝑗 + 2 and 0 ≤ 𝑗 ≤ 𝑁 − 2, 0 ≤ 𝑘 ≤ 𝑁,
+                ⎪0,              otherwise,
+                ⎩
+                {          (                   )
+                  (𝑘 + 1∕2) 𝑗(𝑗 + 1) − 𝑘(𝑘 + 1) , (𝑘 + 𝑗) is even and 𝑘 ≤ 𝑗 − 2,
+         𝑏5𝑘𝑗 =
+                  0,                               otherwise,
+                {
+                  2𝑘 + 1,     (𝑘 + 𝑗) is odd and 0 ≤ 𝑘 ≤ 𝑗 − 1,
+         𝑏6𝑘𝑗 =
+                  0,          otherwise.
+
+    To simplify the notations, we denote
+
+         𝑇1 = (𝐵3𝑇 ⊗ 𝐵3𝑇 )(𝐵2 ⊗ 𝐵2 ),                            𝑇2 = (𝐵4 ⊗ 𝐵4 )(𝐼 ⊗ 𝐵5 )(𝐵3 ⊗ 𝐵3 ),
+         𝑇3 = (𝐵4 ⊗ 𝐵4 )(𝐵5 ⊗ 𝐼)(𝐵3 ⊗ 𝐵3 ),                       𝑇4 = (𝐵4 ⊗ 𝐵4 )(𝐵6 ⊗ 𝐵6 )(𝐵3 ⊗ 𝐵3 ),
+then we have
+
+                                                                                         625
+L. Jin, Z. Li, P. Wang et al.                                                                      Applied Numerical Mathematics 207 (2025) 621–641
+
+
+         𝑈̃ (𝑝) = 𝑇1 [(𝑇2 𝑈̂ ) ⋅ (𝑇3 𝑈̂ )]𝑝 ,                   𝑈̃ (𝑞) = 𝑇1 [𝑇4 𝑈̂ ]𝑞 ,
+where 𝐴 ⋅ 𝐵 represents the dot product of two vectors 𝐴 and 𝐵 , [ ⋅ ]𝑝 means taking the power 𝑝 on each entry of the corresponding
+vector, the same deﬁnition is provided below.
+   Finally, when dealing with terms involving variable coeﬃcients, we use the LG quadrature formulation (3.6) to discretize them.
+Let Ψ, Ψ1 , and Ψ2 denote the matrix representations of the derivatives of the one-dimensional Legendre basis functions at the LG
+points, and 𝑊 represents the LG quadrature weight matrix. In addition, consider the column vectors 𝑓1 , 𝑃𝑥𝑥 , 𝑃𝑦𝑦 , and 𝑃𝑥𝑦 , where
+                                                            2 𝑈 , 𝜕 2 𝑈 and 𝜕 2 𝑈 at two-dimensional LG grid points, respectively.
+each element corresponds to the values of 𝑓 − det(𝐷2 𝑈𝑏 ), 𝜕𝑥𝑥 𝑏 𝑦𝑦 𝑏         𝑥𝑦 𝑏
+   Then denote
+         𝑀 = (Ψ𝑊 ) ⊗ (Ψ𝑊 ),                𝑀1 = (Ψ2 𝑊 ) ⊗ (Ψ𝑊 ) + (Ψ𝑊 ) ⊗ (Ψ2 𝑊 ),
+         𝑃1 = Ψ𝑇2 ⊗ Ψ𝑇1 ,         𝑃2 = Ψ𝑇1 ⊗ Ψ𝑇2 ,      𝑃3 = Ψ𝑇1 ⊗ Ψ𝑇1 ,
+         𝑃4 = diag(𝑃𝑥𝑥 )𝑃2 + diag(𝑃𝑦𝑦 )𝑃1 − 2diag(𝑃𝑥𝑦 )𝑃3 ,
+         𝑃5 = 𝑃𝑥𝑥 + 𝑃𝑦𝑦 ,         𝑇 = 𝐴 ⊗ 𝐵 + 2𝐶 ⊗ 𝐶 + 𝐵 ⊗ 𝐴,
+where 𝐴𝑘𝑗 = (𝜙′′
+              𝑘     𝑗 ), 𝐵𝑘𝑗 = (𝜙𝑘 , 𝜙𝑗 ), 𝐶𝑘𝑗 = (𝜙𝑘 , 𝜙𝑗 ). The elements are deﬁned as follows,
+                 , 𝜙′′                             ′    ′
+
+                    {
+                        2(2𝑘 + 3)(2𝑗 + 3)(𝑘 + 1)(𝑘 + 2),            𝑘, 𝑗 have the same parity,
+         𝐴𝑘𝑗 =
+                        0,                                          otherwise,
+
+                     ⎧ 2 + 2 ,                    𝑘 = 𝑗,
+                     ⎪ 2𝑗+1 2𝑗+5
+         𝐵𝑘𝑗 = 𝐵𝑗𝑘 = ⎨− 2 ,                        𝑘 = 𝑗 + 2,
+                         2𝑗+5
+                     ⎪
+                     ⎩0,                          otherwise,
+and the matrix 𝐶 is a diagonal matrix with 𝐶𝑘𝑘 = 4𝑘 + 6, 𝑘 = 0, 1, ⋯ , 𝑁 − 2.
+    By discretizing the spectral format, the Legendre-Galerkin formulation (3.9) is equivalent to the following nonlinear algebraic
+system:
+                               (                               )
+          (𝑈̂ ) ∶= −𝜀𝑇 𝑈̂ + 𝑇1 (𝑇2 𝑈̂ ) ⋅ (𝑇3 𝑈̂ ) − [𝑇4 𝑈̂ ]2 + 𝑇𝐸 − 𝑇𝐹 = 0                                                              (3.16)
+where
+
+         𝑇𝐸 = 𝑀𝑃4 𝑈̂ ,             𝑇𝐹 = 𝑀𝑓1 + 𝜀𝑀1 𝑃5 .
+    We can numerically solve the nonlinear algebraic equations (3.16) using the Newton method. And the corresponding Jacobi matrix
+is as follows:
+                            (                                                )
+          (𝑈̂ ) = −𝜀𝑇 + 𝑇1 (𝑇2 𝑈̂ ) ⋅ 𝑇3 + (𝑇3 𝑈̂ ) ⋅ 𝑇 4 − 2(𝑇4 𝑈̂ ) ⋅ 𝑇 4 + 𝑀𝑃4 .                                                      (3.17)
+
+3.2. The GLOFs-Galerkin method
+
+    For the numerical approximation of problem with weak singularities, we present the GLOFs-Galerkin method in this subsection.
+The GLOFs proposed by S. Chen and J. Shen, et al. in [13–15], are constructed by applying a suitable logarithmic mapping to the
+Laguerre functions. As noted in [14], the GLOFs are well-suited for the numerical approximation of problem with weak singularity
+at one endpoint, where the solution remains ﬁnite at this point, but its derivatives may be undeﬁned or become inﬁnite. Building
+on the groundwork above, we will introduce the GLOFs-Galerkin method for the numerical approximation solutions to the problem
+(1.1), speciﬁcally tailored to address corner singularities.
+    Suppose 𝛼, 𝛽 > −1, 𝜆 ∈ ℝ, for 𝑥 ∈ 𝐼̃ = (0, 1), the GLOFs in [14] are deﬁned as follows:
+          (𝛼,𝛽,𝜆)                                  𝛽−𝜆     (               )
+         𝑆−1      (𝑥) ≡ 0,        𝑆𝑛(𝛼,𝛽,𝜆) (𝑥) = 𝑥 2 ℒ𝑛(𝛼) − (𝛽 + 1) log 𝑥 ,             𝑛 > 0,                                           (3.18)
+where ℒ𝑛𝛼 (𝜉) is the standard classical Laguerre polynomial of degree 𝑛.
+    In this paper, our intention is to utilize the special case 𝛼 = 𝜆 = 0, as used in [15] for solving the boundary layer problems,
+                              𝛽
+         𝑆𝑛(𝛽) (𝑥) = 𝑥 2 ℒ𝑛(0) (−(𝛽 + 1) log 𝑥) ,          𝑛 > 0,                                                                          (3.19)
+which have the following orthogonality
+             1
+                                             𝛿𝑚𝑛
+                 𝑆𝑛(𝛽) (𝑥)𝑆𝑚(𝛽) (𝑥) 𝑑𝑥 =           .                                                                                       (3.20)
+         ∫                                 (𝛽 + 1)
+         0
+                    𝛾,log 𝑥                                                {                            }
+The space 𝑁     is deﬁned as the span of functions 𝑥𝛾 , 𝑥𝛾 log 𝑥, 𝑥𝛾 (log 𝑥)2 , ⋯ , 𝑥𝛾 (log 𝑥)𝑁 . Then, the following GLOFs-Gauss
+quadrature holds
+
+                                                                                          626
+L. Jin, Z. Li, P. Wang et al.                                                                                        Applied Numerical Mathematics 207 (2025) 621–641
+
+             1
+                                  𝑁
+                                  ∑                                             𝛽,log 𝑥
+                 𝑓 (𝑥)𝑔(𝑥) 𝑑𝑥 =         𝑓 (𝑥(𝛽)   (𝛽) (𝛽)
+                                            𝑗 )𝑔(𝑥𝑗 )𝜔𝑗 ,          ∀𝑓 ⋅ 𝑔 ∈ 2𝑁+1 ,                                                                          (3.21)
+         ∫
+                                  𝑗=1
+         0
+                                                       (                 )
+where 𝑥𝑗 = 𝑒−𝜉𝑗 ∕(𝛽+1) and 𝜔𝑗 = 𝜔̃ 𝑗 ∕ (𝛽 + 1)(𝑥𝑗 )𝛽                         represent the GLOFs-Gauss nodes and weights, respectively. Here {𝜉𝑗 , 𝜔̃ 𝑗 }𝑁
+             (𝛽)                          (𝛽)                      (𝛽)
+                                                                                                                                                         𝑗=0
+are the Laguerre-Gauss-Radou nodes and weights.
+                                   {            }𝑁
+               ̃ = span 𝑆𝑛 (𝑥)
+    Denote 𝑆𝑁 (𝐼)                   ̃ = 𝐼̃2 , the approximation space is then deﬁned as follows:
+                                   ,Ω
+                                        (𝛽)
+                               𝑛=0
+          0 ̃               ̃ lim 𝑣(𝑥) = 𝑣(1) = 0},                       0 ̃      0 ̃      0 ̃
+         𝑆𝑁 (𝐼) ∶= {𝑣 ∈ 𝑆𝑁 (𝐼),                                          𝑆𝑁 (Ω) = 𝑆𝑁 (𝐼) ⊗ 𝑆𝑁 (𝐼).
+                                              𝑥→0
+                                                                                                       ̃ ,
+                                                                         ̃ such that for any 𝑣𝑁 ∈ 𝑆 0 (Ω)
+                                                                𝜀 ∈ 𝑆 0 (Ω)
+The GLOFs–Galerkin formulation for the problem (2.4) is to ﬁnd 𝑈𝑁    𝑁                             𝑁
+              𝜀
+                         (        𝜀
+                                         ) (   𝜀
+                                                           )
+         −𝜀(Δ𝑈𝑁 , Δ𝑣𝑁 ) + det(𝐷2 𝑈𝑁 ), 𝑣𝑁 + 𝐸(𝑈𝑁 , 𝑈𝑏 ), 𝑣𝑁 = 𝐹 (𝑣𝑁 ).                                                                                       (3.22)
+   Next, we proceed to construct the matrix forms of the spectral formulation (3.22). Here, we also construct two-dimensional basis
+functions by employing the tensor product of one-dimensional basis functions. Referring to the one-dimensional GLOFs basis functions
+mentioned in [15],
+
+         𝜙̃ 𝑛 (𝑥) = 𝑆𝑛(𝛽) (𝑥) − 𝑆𝑛−1
+                                 (𝛽)
+                                     (𝑥),           𝑛 = 1, 2, ⋯ , 𝑁.
+                                                                                                                       𝛽,𝜆
+We note that the ﬁrst and second derivatives of the basis functions can be calculated using 𝑆𝑛 (𝑥), as shown below:
+                     𝛽 ( (𝛽,2)                   )
+         𝜙̃ ′𝑛 (𝑥) =     𝑆𝑛 (𝑥) − 𝑆𝑛−1  (𝛽,2)
+                                              (𝑥) + (𝛽 + 1)𝑆𝑛−1(𝛽,2)
+                                                                     (𝑥),
+                     2
+                                                        𝑛−2
+                                                        ∑
+         𝜙̃ ′′
+             𝑛 (𝑥) = 𝑎1 𝑆𝑛
+                         (𝛽,4)           (𝛽,4)
+                               (𝑥) + 𝑎2 𝑆𝑛−1   (𝑥) − 𝑎3     𝑆𝑘(𝛽,4) (𝑥),
+                                                             𝑘=0
+
+where
+                   𝛽(𝛽 − 2)          𝛽(𝛽 − 2)          𝛽          𝛽 −2
+         𝑎1 =               , 𝑎2 = −          + (𝛽 + 1) + (𝛽 + 1)      , 𝑎3 = (𝛽 + 1)2 .
+                      4                 4              2            2
+    Since
+             {                                                    }
+         span Φ                                                           ̃
+               ̃ 𝑛𝑚 (𝑥, 𝑦) = 𝜙̃ 𝑛 (𝑥)𝜙̃ 𝑚 (𝑦) ∶ 𝑛, 𝑚 = 1, 2, ⋯ , 𝑁 ⊆ 𝑆 0 (Ω),
+                                                                      𝑁
+              𝜀 (𝑥, 𝑦) can be expanded as a linear combination of basis functions, and we have
+the solution 𝑈𝑁
+
+                          𝑁
+                          ∑
+          𝜀
+         𝑈𝑁 (𝑥, 𝑦) =             𝑈̂ 𝑛𝑚 𝜙̃ 𝑛 (𝑥)𝜙̃ 𝑚 (𝑦),                                                                                                     (3.23)
+                         𝑛,𝑚=1
+         {         }𝑁
+where 𝑈̂ 𝑚𝑛 𝑚,𝑛=1 are unknown coeﬃcients.
+   By substituting formulation (3.23) into equation (3.22), we can derive the discrete equation for equation (3.22) using GLOFs-Gauss
+quadrature. The equation (3.22) is equivalent to the following nonlinear algebraic system:
+                                      (                                           )
+          (𝑈̂ ) ∶= −𝜀𝑀1 (𝑃̃5 𝑈̂ ) + 𝑀 (𝑃̃1 𝑈̂ ) ⋅ (𝑃̃2 𝑈̂ ) − [𝑃̃3 𝑈̂ ]2 + 𝑃̃4 𝑈̂ − 𝑀 𝑓̃1 − 𝜀𝑀1 𝑃̃6 = 0,                                                    (3.24)
+where
+         𝑀1 = (Ψ ̃ 2𝑊 ̃ ) ⊗ (Ψ̃𝑊      ̃𝑊
+                               ̃ ) + (Ψ ̃ ) ⊗ (Ψ̃ 2𝑊̃ ), 𝑃̃5 = Ψ̃𝑇 ⊗Ψ ̃𝑇 +Ψ ̃𝑇 ⊗Ψ ̃𝑇,
+                                                                 2                 2
+             (                  )𝑇
+         𝑈̂ = 𝑈̂ 11 , ⋯ , 𝑈̂ 𝑁𝑁 ,       𝑀 = (Ψ ̃𝑊        ̃𝑊
+                                                  ̃ ) ⊗ (Ψ ̃ ),          ̃𝑇 ⊗Ψ
+                                                                   𝑃̃1 = Ψ     ̃𝑇,                      𝑃̃6 = 𝑃̃𝑥𝑥 + 𝑃̃𝑦𝑦 ,
+                                                                          2     1
+                   ̃𝑇,
+               ̃𝑇 ⊗Ψ
+         𝑃̃2 = Ψ                                 ̃𝑇,
+                                             ̃𝑇 ⊗Ψ
+                                       𝑃̃3 = Ψ                  𝑃̃4 = diag(𝑃̃𝑥𝑥 )𝑃̃2 + diag(𝑃̃𝑦𝑦 )𝑃̃1 − 2diag(𝑃̃𝑥𝑦 )𝑃̃3 ,
+                1   2                         1   1
+
+and Ψ ̃,Ψ     ̃ 2 denote the matrix representations of the derivatives of the one-dimensional GLOFs basis functions at the GLOFs-Gauss
+         ̃ 1, Ψ
+points, 𝑊 ̃ representing the GLOFs-Gauss quadrature weight matrix, 𝑓̃1 , 𝑃̃𝑥𝑥 , and 𝑃̃𝑦𝑦 are deﬁned similarly to the previous subsection,
+with the distinction that each element corresponds to the values at two-dimensional GLOFs-Gauss grid points.
+    We can numerically solve the nonlinear algebraic equations (3.16) using the Newton method. And the corresponding Jacobi matrix
+is as follows:
+                                (                                                          )
+          (𝑈̂ ) = −𝜀𝑀1 𝑃̃5 + 𝑀 (𝑃̃1 𝑈̂ ) ⋅ 𝑃̃2 + (𝑃̃2 𝑈̂ ) ⋅ 𝑃̃1 − 2(𝑃̃3 𝑈̂ ) ⋅ 𝑃̃3 + 𝑃̃4 .                                                                (3.25)
+
+3.3. A multiple-level framework designed for resolving discretization schemes
+
+  Considering both solution stability and computational eﬃciency, we provide a multiple-level framework based on the continuation
+method for solving the discretization schemes (3.16) and (3.24).
+
+                                                                                          627
+L. Jin, Z. Li, P. Wang et al.                                                                                                 Applied Numerical Mathematics 207 (2025) 621–641
+
+
+3.3.1. The 𝜀 continuation method
+    Let 𝑈̂ 𝜀1 denote the approximate solution to equation (3.16) or (3.24). Subsequently, by systematically reducing 𝜀 and numerically
+solving for the unknown 𝑈 𝜀 through the Newton iterative process with the initial data 𝑈̂ 𝜀1 , we obtain a new approximation solution,
+denoted as 𝑈̂ 𝜀2 . This process is repeated until the approximation solution converges to the solution of equation (1.1) as 𝜀 tends to 0.
+    However, the estimate ‖𝑈 − 𝑈𝑁     𝜀 ‖ ≈ 𝑂(𝜀) in [22] suggests that employing the same 𝑁 may lead to numerous unnecessary cal-
+
+culations. On the other hand, as 𝑁 increases, GLOFs-Gauss nodes approach zeros rapidly. Nonetheless, accurately computing the
+corresponding weights becomes challenging due to machine precision issues, resulting in a degradation of the condition number
+of the discrete matrices. Furthermore, the discrete matrix properties of fourth-order equations generally fall short in comparison to
+those of second-order equations. As a response to these challenges, we have devised a multiple-level framework employing the 𝜀
+continuation method. This framework enables a continuous increment in the value of 𝑁 as 𝜀 decreases, ensuring both eﬃciency and
+stability in calculations.
+
+3.3.2. The multiple-level framework
+   As 𝜀 is continued, our approach employs low-degree polynomials to handle the equation with larger 𝜀 values. Subsequently, with
+the gradual decrease of 𝜀, we increment the degree 𝑁 of the polynomial at each step, continuing until 𝜀 = 0. To provide a concise
+overview, the corresponding algorithm is presented in the following ﬂow chart:
+
+
+Algorithm A multiple-level framework designed for resolving discretization schemes.
+Input:
+  𝑁𝑖 : the degree of freedom in diﬀerent 𝜀𝑖 , 𝑖 = 1, 2, … , 𝑚.
+  𝜏 and 𝑁𝑚𝑎𝑥 : the tolerance and maximum number of Newton iterations.
+ Initialization: Set 𝑖 = 1, 𝑈̂ 𝑁
+                                  [0],(𝑗)
+                                          = 0, 1 ≤ 𝑗 ≤ (𝑁𝑖∗ )2 .
+                                    𝑖
+  for 𝑖 = 1 to 𝑚 do
+     while 𝑛 < 𝑁𝑚𝑎𝑥 and 𝜏𝑛𝑖 > 𝜏 do
+                                                        ( [𝑛] ) 𝐵[𝑛], else set
+         If 𝑁𝑖 > 𝑁 ∗ , construct a suitable preconditioner                  ( 𝐵 =) 𝐼 .
+         Then solve the linearized equation 𝐵 𝑈̂ 𝑁             𝑣𝑖 = 𝐵 𝑈̂ 𝑁[𝑛] .
+                                                                        𝑖             𝑖
+
+        Compute 𝜏𝑛𝑖 = ||𝑣[𝑛]                              ̂ [𝑛] ̂ [𝑛−1] + 𝑣[𝑛−1] .
+                         𝑖 ||𝐿∞ and set 𝑛 = 𝑛 + 1, update 𝑈𝑁𝑖 = 𝑈𝑁𝑖        𝑖
+     end while       (           )
+         ̂ [0]
+     Set 𝑈𝑁 = 𝑧𝑒𝑟𝑜𝑠 𝑁𝑖+1 , 𝑁𝑖+1 .
+                         ∗     ∗
+             𝑖+1
+                         (           )         (                   )
+     Update: 𝑈̂ 𝑁
+                [0]
+                    1 ∶ 𝑁𝑖∗ , 1 ∶ 𝑁𝑖∗ = 𝑟𝑒𝑠ℎ𝑎𝑝𝑒 𝑈̂ 𝑁[𝑛] , 𝑁𝑖∗ , 𝑁𝑖∗ .
+                   𝑖+1
+                                  ( [0] )             𝑖
+
+     Vectorization: 𝑈̂ [0]
+                           = 𝑣𝑒𝑐 𝑈̂
+                             𝑁𝑖+1
+                                          .  𝑁𝑖+1
+ end for
+Output: 𝑈̂ 𝑁𝑚 : the unknown expansion coeﬃcients in (3.10) or in (3.23).
+
+
+
+
+Remark 1. The symbol 𝑈̂ 𝑁                             represents the 𝑗 -th component of 𝑈̂ 𝑁𝑖 in the 𝑛-th iteration. For the Legendre-Galerkin method, 𝑁𝑖∗ =
+                                            [𝑛],(𝑗)
+                                             𝑖
+𝑁𝑖 − 1, while for the GLOFs-Galerkin method, 𝑁𝑖∗ = 𝑁𝑖 .
+
+Remark 2. In experiments, we employed the SSOR (Symmetric Successive Over-Relaxation) preconditioner with 𝜔 = 0.2 or 𝜔( = 0.8),
+where 𝐵 = (𝐷 + 𝜔𝐿)𝐷−1 (𝐷 + 𝜔𝑈 ), and 𝐿, 𝐷, 𝑈 are the lower triangular, diagonal, and upper triangular parts of the  𝑈̂ 𝑁 ,
+                                                                                                                         [𝑛]
+                                                                                                                           𝑖
+respectively.
+
+4. Error estimates
+
+   In this section, our aim is to establish the existence, uniqueness and error estimates for the Legendre-Galerkin method of the
+problem (3.9).
+
+4.1. Preliminaries
+
+   To begin, we introduce some function spaces essential for this paper. Let Ω denote a bounded open domain in ℝ𝑑 with the
+boundary 𝜕Ω, and 𝐿𝑝 (Ω) (1 ≤ 𝑝 ≤ ∞) represents the standard Lebesgue spaces.
+   Let 𝑚 be any non-negative integer, the Sobolev space 𝐻 𝑚 (Ω) is deﬁned as
+                  {                                              }
+         𝐻 𝑚 (Ω) = 𝑣 ∈ 𝐿2 (Ω) ∶ ∀ 𝛼 ∈ ℕ𝑑 , |𝛼| ≤ 𝑚, 𝐷𝛼 𝑣 ∈ 𝐿2 (Ω) ,
+which is equipped with the norm and semi-norm
+                               (                               )1                          (                         )1
+                                    ∑                           2                              ∑                      2
+         ‖𝑢‖𝐻 𝑚 (Ω) =                       ‖𝐷𝛼 𝑢‖2 2               ,       |𝑢|𝐻 𝑚 (Ω) =               ‖𝐷𝛼 𝑢‖2 2          ,
+                                                       𝐿 (Ω)                                                 𝐿 (Ω)
+                                    |𝛼|≤𝑚                                                      |𝛼|=𝑚
+
+associated inner product as follows
+
+                                                                                                       628
+L. Jin, Z. Li, P. Wang et al.                                                                     Applied Numerical Mathematics 207 (2025) 621–641
+
+                                ∑
+         (𝑢, 𝑣)𝐻 𝑚 (Ω) =                  𝐷𝛼 𝑢𝐷𝛼 𝑣𝑑𝑥, ∀𝑢, 𝑣 ∈ 𝐻 𝑚 (Ω),
+                                     ∫
+                             |𝛼|≤𝑚
+                                     Ω
+
+evidently that (𝑢, 𝑢)𝐻 𝑚 (Ω) = ‖𝑢‖2𝐻 𝑚 (Ω) . If 𝑚 = 0, the Hilbert space 𝐻 𝑚 (Ω) reduces to the 𝐿2 (Ω) space. Unless otherwise speciﬁed, (𝑢, 𝑢)
+in the following text refers to (𝑢, 𝑢)𝐿2 (Ω) .
+                                                                                                                                 ̃ 2,0
+    In this paper, we consider the tensorized domain Ω = [−1, 1] × [−1, 1] for error analysis. We recall the projection operator Π 𝑁,Ω
+from 𝐻 2 (Ω) ∩ 𝐻01 (Ω) into 𝑋𝑁 0 (Ω). According to Theorem 6.4 and Theorem 7.4 of [3] with 𝑡 = 2 and 𝑝 = 1, we present the error
+
+estimates for this projection operator in the following lemma.
+
+                                    ̃ 2,0 from 𝐻 2 (Ω) ∩ 𝐻 1 (Ω) into 𝑋 0 (Ω) such that, for any real numbers 𝜇 and 𝑚, 0 ⩽ 𝜇 ⩽ 2 ⩽ 𝑚,
+Lemma 4.1. There exists an operator Π 𝑁,Ω                 0            𝑁
+and for any function 𝑢 in 𝐻 𝑚 (Ω) ∩ 𝐻01 (Ω), the following estimate holds:
+
+              ̃ 2,0 𝑢‖𝐻 𝜇 (Ω) ⩽ 𝐶𝑁 𝜇−𝑚 ‖𝑢‖𝐻 𝑚 (Ω) .
+         ‖𝑢 − Π                                                                                                                             (4.1)
+                𝑁,Ω
+
+
+   Crucially, we delve into some useful lemmas regarding the fully nonlinear Monge-Ampère equation. One such lemma is the
+divergence-free row property (see Lemma 3.1 in [22]) of cof (𝐷𝒗).
+
+Lemma 4.2. Given a vector-valued function 𝒗 = (𝑣1 , 𝑣2 , ⋯ , 𝑣𝑛 ) ∶ Ω → ℝ𝑛 , assume 𝒗 ∈ [𝐶 2 (Ω)]𝑛 , then the cofactor matrix cof(𝐷𝒗) of the
+gradient matrix 𝐷𝒗 of 𝒗 satisﬁes the following divergence-free row property:
+                                ∑𝑛
+                                     𝜕 (        )
+         div(cof (𝐷𝒗))𝑖 =                cof(𝐷𝒗) 𝑖𝑗 = 0, 𝑓 𝑜𝑟               𝑖 = 1, 2, ⋯ , 𝑛,                                                (4.2)
+                                𝑗=1
+                                    𝜕𝑥𝑗
+
+where (cof (𝐷𝒗))𝑖 and (cof(𝐷𝒗))𝑖𝑗 denote respectively the 𝑖th row and the (𝑖, 𝑗)-entry of cof(𝐷𝒗).
+
+   Another lemma concerns the mean value theorem of the determinant. For two real 𝑛 × 𝑛 matrices 𝐴 = (𝑎𝑖𝑗 )𝑛×𝑛 and 𝐵 = (𝑏𝑖𝑗 )𝑛×𝑛 ,
+we start by recalling the Frobenius product:
+                     𝑛
+                     ∑
+         𝐴∶𝐵=                𝑎𝑖𝑗 𝑏𝑖𝑗 = tr(𝐴𝑇 𝐵).
+                     𝑖,𝑗=1
+
+Subsequently, the following mean value theorem for the determinant is applicable, as detailed in Lemma 2.1 of [1].
+
+Lemma 4.3. For 𝑢, 𝑣 ∈ 𝐶 2 (Ω), we have
+                                    (                   )
+         det(𝐷2 𝑢) − det(𝐷2 𝑣) = cof 𝜏𝐷2 𝑢 + (1 − 𝜏)𝐷2 𝑣 ∶ (𝐷2 𝑢 − 𝐷2 𝑣),                                                                   (4.3)
+for some 𝜏 ∈ [0, 1].
+
+   Let 𝜆1 (𝐴) and 𝜆𝑛 (𝐴) denote the minimum and maximum eigenvalues of a symmetric matrix A. Inspired by the approach in [1],
+we make the following assumption on the solution.
+
+Assumption 4.1. The solution 𝑢 of (1.1) is in 𝐶 2 (Ω), strictly convex on Ω and for constants 𝑚′ , 𝑀 ′ > 0, independent of 𝑁 such that
+
+         𝑚′ ≤ 𝜆1 (𝐷2 𝑢) ≤ 𝜆𝑛 (𝐷2 𝑢) ≤ 𝑀 ′ .
+
+    As a consequence of Assumption 4.1, we obtain the following lemma.
+
+Lemma 4.4. If the Assumption 4.1 is satisﬁed, there exist constants 𝑚, 𝑀 > 0, independent of 𝑁 , such that for any 𝑣𝑁 ∈ 𝑃𝑁 (Ω), the
+following inequality holds:
+
+         𝑚‖𝑣𝑁 ‖2 2           ≤ (cof(𝐷2 𝑢)𝑣𝑁 , 𝑣𝑁 ) ≤ 𝑀‖𝑣𝑁 ‖2 2          .                                                                   (4.4)
+                   𝐿 (Ω)                                        𝐿 (Ω)
+
+
+Proof. Considering cof (𝐴) = det(𝐴)(𝐴−1 )𝑇 , we have
+                (𝑚′ )𝑛                                       (𝑀 ′ )𝑛
+         𝑚=            ≤ 𝜆1 (cof (𝐷2 𝑢)) ≤ 𝜆𝑛 (cof (𝐷2 𝑢)) ≤         = 𝑀.
+                 𝑀′                                           𝑚′
+By the Rayleigh quotient,
+
+                                (cof (𝐷2 𝑢)𝑣𝑁 , 𝑣𝑁 )
+         𝜆1 (cof (𝐷2 𝑢)) ≤                             ≤ 𝜆𝑛 (cof(𝐷2 𝑢)),
+                                         ‖𝑣𝑁 ‖2 2
+                                              𝐿 (Ω)
+
+                                                                                       629
+L. Jin, Z. Li, P. Wang et al.                                                                             Applied Numerical Mathematics 207 (2025) 621–641
+
+
+thus
+                            (                 )
+         𝑚‖𝑣𝑁 ‖2 2         ≤ cof (𝐷2 𝑢)𝑣𝑁 , 𝑣𝑁 ≤ 𝑀‖𝑣𝑁 ‖2 2              . □
+                   𝐿 (Ω)                                        𝐿 (Ω)
+
+
+   In addition, we revisit the linearization of (2.1), a fundamental technique employed for establishing the existence, uniqueness, and
+spectral convergence of numerical solutions [20–22]. Let M𝜀 (𝑣) ∶= 𝜀Δ2 𝑣 − det(𝐷2 𝑣), for a given smooth function 𝑤, the linearization
+of M𝜀 (𝑣) at the solution 𝑢𝜀 is deﬁned as
+
+                            M𝜀 (𝑢𝜀 + 𝑡𝑤) − M𝜀 (𝑢𝜀 )
+         𝐿𝑢𝜀 (𝑤) = lim
+                      𝑡→0         𝑡
+                    =𝜀Δ 𝑤 − Φ𝜀 ∶ 𝐷2 𝑤
+                        2
+
+
+                    =𝜀Δ2 𝑤 − div(Φ𝜀 𝐷𝑤),
+where Φ𝜀 denotes the cofactor matrix of 𝐷2 𝑢𝜀 .
+  To facilitate subsequent proofs, we introduce the following linearization auxiliary problem
+
+         ⎧𝐿𝑢𝜀 (𝑤) = 𝑞,             𝑖𝑛 Ω,
+         ⎪
+         ⎨𝑤 = 0,                   𝑜𝑛 𝜕Ω,                                                                                                           (4.5)
+         ⎪Δ𝑤 = 𝜀,                  𝑜𝑛 𝜕Ω.
+         ⎩
+                                            0 (Ω) such that ∀𝑣 ∈ 𝑋 0 (Ω)
+Its corresponding weak form is to ﬁnd 𝑤𝑁 ∈ 𝑋𝑁                 𝑁   𝑁
+
+         (𝑢𝜀 ; 𝑤𝑁 , 𝑣𝑁 ) ∶= (𝐿𝑢𝜀 (𝑤𝑁 ), 𝑣𝑁 ) = 𝜀(Δ𝑤𝑁 , Δ𝑣𝑁 ) + (Φ𝜀 𝐷𝑤𝑁 , 𝐷𝑣𝑁 ) = (𝑞, 𝑣𝑁 ).                                                         (4.6)
+    Since Ω is convex, the inequality ‖𝑤𝑁 ‖𝐻 2 (Ω) ≤ 𝐶‖Δ𝑤𝑁 ‖𝐿2 (Ω) holds (see [7]). To apply the conclusion of Lemma 4.4, we must
+also assume that the solution 𝑢𝜀 of (2.1) satisﬁes Assumption 4.1. This requirement, combined with the application of Lemma 4.4
+                                                         𝑚 𝑚
+and the Poincaré inequality, there exists 𝐶1 (𝜀) = min{𝜀, , } > 0 such that
+                                                                        2 2𝐶
+
+              𝜀                                          𝜀
+         (𝑢 ; 𝑤𝑁 , 𝑤𝑁 ) = 𝜀(Δ𝑤𝑁 , Δ𝑤𝑁 ) + (Φ 𝐷𝑤𝑁 , 𝐷𝑤𝑁 )
+                                ≥ 𝜀‖Δ𝑤𝑁 ‖2 2         + 𝑚‖𝐷𝑤𝑁 ‖2 2
+                                             𝐿 (Ω)              𝐿 (Ω)
+                                                  𝑚         𝑚                                                                                       (4.7)
+                                ≥ 𝜀‖Δ𝑤𝑁 ‖2 2 + ‖𝐷𝑤𝑁 ‖2 2 +    ‖𝑤𝑁 ‖2 2
+                                         𝐿 (Ω)    2  𝐿 (Ω) 2𝐶      𝐿 (Ω)
+                                ≥ 𝐶(𝜀)‖𝑤𝑁 ‖2 2 .
+                                            𝐻 (Ω)
+                                                                                 1                                                        1
+   Utilizing the embedding 𝐻 1 (Ω) ↪ 𝐿4 (Ω), and ‖Φ𝜀 ‖𝐿2 (Ω) = 𝑂(𝜀− 2 ) (see (1.10) in [22]) and setting 𝐶2 (𝜀) = max{1, 𝜀− 2 }, we obtain
+the following continuity of the bilinear form (𝑢𝜀 ; ⋅, ⋅) through Hölder’s inequality
+
+         (𝑢𝜀 ; 𝑤𝑁 , 𝑣𝑁 ) = 𝜀(Δ𝑤𝑁 , Δ𝑣𝑁 ) + (Φ𝜀 𝐷𝑤𝑁 , 𝐷𝑣𝑁 )
+                                ≤ 𝐶‖𝑤𝑁 ‖𝐻 2 (Ω) ‖𝑣𝑁 ‖𝐻 2 (Ω) + 𝐶‖Φ𝜀 ‖𝐿2 (Ω) ‖∇𝑤𝑁 ‖𝐿4 (Ω) ‖∇𝑣𝑁 ‖𝐿4 (Ω)
+                                                                                                                                                    (4.8)
+                                ≤ 𝐶‖𝑤𝑁 ‖𝐻 2 (Ω) ‖𝑣𝑁 ‖𝐻 2 (Ω) + 𝐶‖Φ𝜀 ‖𝐿2 (Ω) ‖∇𝑤𝑁 ‖𝐻 1 (Ω) ‖∇𝑣𝑁 ‖𝐻 1 (Ω)
+                                ≤ 𝐶𝐶2 (𝜀)‖𝑤𝑁 ‖𝐻 2 (Ω) ‖𝑣𝑁 ‖𝐻 2 (Ω) .
+
+Consequently, by applying the Lax-Milgram lemma, we conclude that there exists a unique solution 𝑤𝑁 ∈ 𝑋𝑁
+                                                                                                       0 (Ω) satisfying (4.6).
+
+
+
+4.2. Existence, uniqueness and spectral convergence of numerical solutions
+
+   Now, we turn our attention to the original problem (3.9). Inspired by [21], we derive the existence, uniqueness and spectral con-
+vergence of numerical solutions by the Banach ﬁxed-point theorem and the linearization of (2.1) discussed in the previous subsection.
+   Firstly, we deﬁne a nonlinear mapping 𝑇𝑁 ∶ 𝑋𝑁   0 (Ω) → 𝑋 0 (Ω). For any 𝑤 ∈ 𝑋 0 (Ω), 𝑇 (𝑤 ) denotes the solution of the fol-
+                                                             𝑁                𝑁     𝑁        𝑁    𝑁
+lowing problem:
+                                       (                 )
+         (𝑢𝜀 ; 𝑤𝑁 − 𝑇𝑁 (𝑤𝑁 ), 𝑣𝑁 ) = 𝜀 Δ(𝑤𝑁 + 𝑈𝑏 ), Δ𝑣𝑁
+                                (                      )                                                                                            (4.9)
+                              − det(𝐷2 (𝑤𝑁 + 𝑈𝑏 )), 𝑣𝑁 + (𝑓 , 𝑣𝑁 ), ∀𝑣𝑁 ∈ 𝑋𝑁
+                                                                           0
+                                                                             (Ω).
+We note that 𝑇𝑁 (𝑤𝑁 ) is uniquely deﬁned, guaranteed by the coercivity (4.7) and continuity (4.8) of the bilinear form (𝑢𝜀 ; ⋅, ⋅). Any
+ﬁxed point 𝑤𝑁 of the nonlinear mapping 𝑇𝑁 is a solution of the problem (3.9).
+                                                   ̃ 2,0 𝑈 𝜀 ,
+   For 𝜌 > 0, let us deﬁne a small neighborhood of Π 𝑁,Ω
+
+         𝐵𝑁 (𝜌) ∶= {𝑤𝑁 ∈ 𝑋𝑁
+                          0             ̃ 2,0 𝑈 𝜀 ‖𝐻 2 (Ω) ≤ 𝜌}.
+                            (Ω) ∶ ‖𝑤𝑁 − Π                                                                                                         (4.10)
+                                          𝑁,Ω
+
+                                                                               630
+L. Jin, Z. Li, P. Wang et al.                                                                                      Applied Numerical Mathematics 207 (2025) 621–641
+
+
+It is crucial to ensure the existence of a unique ﬁxed point for the nonlinear mapping 𝑇𝑁 within the speciﬁed small neighborhood
+𝐵𝑁 (𝜌).
+
+
+                                                                                                              −3
+Lemma 4.5. If 𝑢𝜀 , 𝑈𝑏 ∈ 𝐻 2 (Ω) and 𝑈 𝜀 ∈ 𝐻 𝑚 (Ω), then there exists a constant 𝐶3 (𝜀) = 𝑂(𝜀 2 ) such that
+
+                          ̃ 2,0 𝑈 𝜀 )‖𝐻 2 (Ω) ≤ 𝐶3 (𝜀)𝑁 2−𝑚 ‖𝑈 𝜀 ‖𝐻 𝑚 (Ω) .
+          ̃ 2,0 𝑈 𝜀 − 𝑇𝑁 (Π
+         ‖Π                                                                                                                                                (4.11)
+            𝑁,Ω             𝑁,Ω
+
+
+                   ̃ 2,0 𝑈 𝜀 and 𝑣𝑁 = 𝜙 − 𝑇𝑁 (𝜙) ∈ 𝑋 0 (Ω), from (2.4) with 𝑣 = 𝑣𝑁 and (4.9), then we can utilize the mean value
+Proof. Letting 𝜙 = Π 𝑁,Ω                            𝑁
+theorem (4.3) and the divergence-free row property (4.2) of cof(𝐷2 𝑣) to obtain
+                         (                 ) (                    )
+      (𝑢𝜀 ;𝑣𝑁 , 𝑣𝑁 ) = 𝜀 Δ(𝜙 + 𝑈𝑏 ), Δ𝑣𝑁 − det(𝐷2 (𝜙 + 𝑈𝑏 )), 𝑣𝑁 + (𝑓 , 𝑣𝑁 )
+               (                 ) (                      )
+            = 𝜀 Δ(𝜙 + 𝑈𝑏 ), Δ𝑣𝑁 − det(𝐷2 (𝜙 + 𝑈𝑏 )), 𝑣𝑁
+                           (                 ) (                        )
+                         −𝜀 Δ(𝑈 𝜀 + 𝑈𝑏 ), Δ𝑣𝑁 + det(𝐷2 (𝑈 𝜀 + 𝑈𝑏 )), 𝑣𝑁
+                (                 ) (                                           )
+            = 𝜀 Δ(𝜙 − 𝑈 𝜀 ), Δ𝑣𝑁 − det(𝐷2 (𝜙 + 𝑈𝑏 )) + det(𝐷2 (𝑈 𝜀 + 𝑈𝑏 )), 𝑣𝑁                                          (4.12)
+                (                 )    (                     )
+            = 𝜀 Δ(𝜙 − 𝑈 𝜀 ), Δ𝑣𝑁 − Φ𝜀1 ∶ 𝐷2 (𝜙 − 𝑈 𝜀 ), 𝑣𝑁
+                (                 ) (                          )
+            = 𝜀 Δ(𝜙 − 𝑈 𝜀 ), Δ𝑣𝑁 − div(Φ𝜀1 𝐷(𝜙 − 𝑈 𝜀 )), 𝑣𝑁
+                (                 ) (                      )
+            = 𝜀 Δ(𝜙 − 𝑈 𝜀 ), Δ𝑣𝑁 + Φ𝜀1 𝐷(𝜙 − 𝑈 𝜀 ), 𝐷𝑣𝑁 ,
+                (                                    )
+where Φ𝜀1 = cof 𝜏𝐷2 (𝜙 + 𝑈𝑏 ) + (1 − 𝜏)𝐷2 (𝑈 𝜀 + 𝑈𝑏 ) for parameter 𝜏 ∈ (0, 1).
+  As noted in the Lemma 4.1 of [21], for the 2 × 2 matrix cof (𝐴) and cof(𝐵) whose entries are the same as those of 𝐴 and 𝐵 , it
+holds that
+
+         ||cof 𝐴||𝐿2 (Ω) = ||𝐴||𝐿2 (Ω) ,          ||cof𝐴 + cof𝐵||𝐿2 (Ω) = ||𝐴 + 𝐵||𝐿2 (Ω) .                                                                (4.13)
+    Then ‖Φ𝜀1 ‖𝐿2 (Ω) is bounded as follows by the triangle inequality and the Lemma 4.1 with 𝜇 = 2 and 𝑚 = 2,
+                            (                                     )
+         ‖Φ𝜀1 ‖𝐿2 (Ω) = ‖cof 𝜏𝐷2 (𝜙 + 𝑈𝑏 ) + (1 − 𝜏)𝐷2 (𝑈 𝜀 + 𝑈𝑏 ) ‖𝐿2 (Ω)
+                        = ‖𝜏𝐷2 (𝜙 + 𝑈𝑏 ) + (1 − 𝜏)𝐷2 (𝑈 𝜀 + 𝑈𝑏 )‖𝐿2 (Ω)
+                        ≤ ‖𝐷2 (𝜙 − 𝑈 𝜀 )‖𝐿2 (Ω) + ‖𝐷2 (𝑈 𝜀 + 𝑈𝑏 )‖𝐿2 (Ω)
+                        ≤ ‖𝜙 − 𝑈 𝜀 ‖𝐻 2 (Ω) + ‖𝑈 𝜀 + 𝑈𝑏 ‖𝐻 2 (Ω)
+                           (                           )
+                        ≤ 𝐶 ‖𝑢𝜀 ‖𝐻 2 (Ω) + ‖𝑈𝑏 ‖𝐻 2 (Ω) .
+                                                                                                                                  −1
+    Moreover, by referring to equation (1.10) in [22], we deduce further insights ‖𝑢𝜀 ‖𝐻 2 (Ω) = 𝑂(𝜀 2 ). Consequently, max{𝜀,
+                           1
+‖Φ𝜀1 ‖𝐿2 (Ω) } = 𝑂(𝜀− 2 ) and from (4.12), by the embedding 𝐻 1 (Ω) ↪ 𝐿4 (Ω), the Hölder’s inequality and the error estimates (4.1)
+with 𝜇 = 2,
+
+         (𝑢𝜀 ; 𝑣𝑁 , 𝑣𝑁 ) ≤ 𝜀‖Δ(𝜙 − 𝑈 𝜀 )‖𝐿2 (Ω) ‖Δ𝑣𝑁 ‖𝐿2 (Ω) + ‖Φ𝜀1 ‖𝐿2 (Ω) ‖𝐷(𝜙 − 𝑈 𝜀 )‖𝐿4 (Ω) ‖𝐷𝑣𝑁 ‖𝐿4 (Ω)
+                                ≤ 𝜀‖𝜙 − 𝑈 𝜀 ‖𝐻 2 (Ω) ‖𝑣𝑁 ‖𝐻 2 (Ω) + ‖Φ𝜀1 ‖𝐿2 (Ω) ‖𝜙 − 𝑈 𝜀 ‖𝐻 2 (Ω) ‖𝑣𝑁 ‖𝐻 2 (Ω)                                            (4.14)
+                                      1
+                                ≤ 𝐶𝜀− 2 𝑁 2−𝑚 ‖𝑈 𝜀 ‖  𝐻 𝑚 (Ω) ‖𝑣𝑁 ‖𝐻 2 (Ω) .
+
+                                                                                                                  −3
+Finally, from (4.14) and the coercivity of the bilinear form (𝑢𝜀 ; ⋅, ⋅), setting 𝐶3 (𝜀) = 𝑂(𝜀 2 ), we conclude
+
+                          ̃ 2,0 𝑈 𝜀 )‖𝐻 2 (Ω) ≤ 𝐶3 (𝜀)𝑁 2−𝑚 ‖𝑈 𝜀 ‖𝐻 𝑚 (Ω) . □
+          ̃ 2,0 𝑈 𝜀 − 𝑇𝑁 (Π
+         ‖Π 𝑁,Ω             𝑁,Ω
+
+
+Lemma 4.6. If 𝑈 𝜀 ∈ 𝐻 𝑚 (Ω) ∩ 𝐻01 (Ω) (𝑚 > 2), there exists a positive integer 𝑁0 > 0 and 0 < 𝜌0 < 1. For any 𝑁 > 𝑁0 , 𝑇𝑁 is a strict
+contraction mapping in the ball 𝐵𝑁 (𝜌0 ), i.e., for any 𝑣𝑁 , 𝑤𝑁 ∈ 𝐵𝑁 (𝜌0 ),
+
+                                       1
+         ‖𝑇𝑁 (𝑣𝑁 ) − 𝑇𝑁 (𝑤𝑁 )‖𝐻 2 (Ω) ≤ ‖𝑣𝑁 − 𝑤𝑁 ‖𝐻 2 (Ω) .                                                                                                (4.15)
+                                       2
+
+Proof. For any 𝑣𝑁 , 𝑤𝑁 ∈ 𝐵𝑁 (𝜌) and ∀𝑧𝑁 ∈ 𝑋𝑁
+                                           0 (Ω), from (4.9), by the mean value theorem (4.3) and the divergence-free row
+
+property (4.2) of cof (𝐷 𝑣),
+                        2
+
+
+                                                                                   631
+L. Jin, Z. Li, P. Wang et al.                                                                              Applied Numerical Mathematics 207 (2025) 621–641
+        (                             )
+       𝑢𝜀 ; 𝑇𝑁 (𝑣𝑁 ) − 𝑇𝑁 (𝑤𝑁 ), 𝑧𝑁
+                      (                                        )
+                  =  𝑢𝜀 ; 𝑤𝑁 − 𝑇𝑁 (𝑤𝑁 ) + 𝑇𝑁 (𝑣𝑁 ) − 𝑣𝑁 , 𝑧𝑁 + (𝑢𝜀 ; 𝑣𝑁 − 𝑤𝑁 , 𝑧𝑁 )
+                    (                        ) (                                            )
+                  = Φ𝜀 𝐷(𝑣𝑁 − 𝑤𝑁 ), 𝐷𝑧𝑁 + det(𝐷2 (𝑣𝑁 + 𝑈𝑏 )) − det(𝐷2 (𝑤𝑁 + 𝑈𝑏 )), 𝑧𝑁                                           (4.16)
+                    ( 𝜀                      ) ( 𝜀                       )
+                  = Φ 𝐷(𝑣𝑁 − 𝑤𝑁 ), 𝐷𝑧𝑁 + Φ2 ∶ 𝐷2 (𝑣𝑁 − 𝑤𝑁 ), 𝑧𝑁
+                    (                               )
+                  = (Φ𝜀 − Φ𝜀2 )𝐷(𝑣𝑁 − 𝑤𝑁 ), 𝐷𝑧𝑁 ,
+                (                                      )
+where Φ𝜀2 = cof 𝜏𝐷2 (𝑣𝑁 + 𝑈𝑏 ) + (1 − 𝜏)𝐷2 (𝑤𝑁 + 𝑈𝑏 ) . For the bound of ‖Φ𝜀 − Φ𝜀2 ‖𝐿2 (Ω) , by the triangle inequality, the Lemma 4.1
+with 𝜇 = 2, (4.10) and (4.13), we have
+                                             (                                     )
+      ‖Φ𝜀 − Φ𝜀2 ‖𝐿2 (Ω) = ‖cof (𝐷2 𝑢𝜀 ) − cof 𝜏𝐷2 (𝑣𝑁 + 𝑈𝑏 ) + (1 − 𝜏)𝐷2 (𝑤𝑁 + 𝑈𝑏 ) ‖𝐿2 (Ω)
+                                = ‖𝐷2 (𝑈 𝜀 + 𝑈𝑏 ) − 𝜏𝐷2 (𝑣𝑁 + 𝑈𝑏 ) − (1 − 𝜏)𝐷2 (𝑤𝑁 + 𝑈𝑏 )‖𝐿2 (Ω)
+                                                                       ̃ 2,0 𝑈 𝜀 − 𝑤𝑁 )‖𝐿2 (Ω) + ‖𝐷2 (𝑤𝑁 − 𝑣𝑁 )‖𝐿2 (Ω)
+                                             ̃ 2,0 𝑈 𝜀 )‖𝐿2 (Ω) + ‖𝐷2 (Π
+                                ≤ ‖𝐷2 (𝑈 𝜀 − Π                                                                                                     (4.17)
+                                               𝑁,Ω                       𝑁,Ω
+                                                                     ̃ 2,0 𝑈 𝜀 ‖𝐻 2 (Ω) + ‖Π
+                                         ̃ 2,0 𝑈 𝜀 ‖𝐻 2 (Ω) + 2‖𝑤𝑁 − Π
+                                ≤ ‖𝑈 𝜀 − Π                                                 ̃ 2,0 𝑈 𝜀 − 𝑣𝑁 ‖𝐻 2 (Ω)
+                                           𝑁,Ω                         𝑁,Ω                   𝑁,Ω
+                                   (                         )
+                                ≤ 𝐶 𝑁 2−𝑚 ‖𝑈 𝜀 ‖𝐻 𝑚 (Ω) + 𝜌 .
+From (4.16) and (4.17), by the embedding 𝐻 1 (Ω) ↪ 𝐿4 (Ω), the Hölder’s inequality and the error estimates (4.1) with 𝜇 = 2, we have
+          (                            )
+          𝑢𝜀 ; 𝑇𝑁 (𝑣𝑁 ) − 𝑇𝑁 (𝑤𝑁 ), 𝑧𝑁 ≤ ‖Φ𝜀 − Φ𝜀2 ‖𝐿2 (Ω) ‖𝐷(𝑣𝑁 − 𝑤𝑁 )‖𝐿4 (Ω) ‖𝐷(𝑧𝑁 )‖𝐿4 (Ω)
+                        ≤ ‖Φ𝜀 − Φ𝜀2 ‖𝐿2 (Ω) ‖𝑣𝑁 − 𝑤𝑁 ‖𝐻 2 (Ω) ‖𝑧𝑁 ‖𝐻 2 (Ω)
+                           (                       )
+                        ≤ 𝐶 𝑁 2−𝑚 ‖𝑈 𝜀 ‖𝐻 𝑚 (Ω) + 𝜌 ‖𝑣𝑁 − 𝑤𝑁 ‖𝐻 2 (Ω) ‖𝑧𝑁 ‖𝐻 2 (Ω) ,
+
+taking 𝑧𝑁 = 𝑇𝑁 (𝑣𝑁 ) − 𝑇𝑁 (𝑤𝑁 ) ∈ 𝑋𝑁
+                                   0 (Ω), and using (4.7), we have
+
+                                            (                       )
+      ‖𝑇𝑁 (𝑣𝑁 ) − 𝑇𝑁 (𝑤𝑁 )‖𝐻 2 (Ω) ≤ 𝐶 ∗ (𝜀) 𝑁 2−𝑚 ‖𝑈 𝜀 ‖𝐻 𝑚 (Ω) + 𝜌 ‖𝑣𝑁 − 𝑤𝑁 ‖𝐻 2 (Ω) ,
+                                              (        )−1             (                   )1∕(2−𝑚)
+where 𝐶 ∗ (𝜀) = 𝐶𝐶1−1 (𝜀). By selecting 𝜌0 = 4𝐶 ∗ (𝜀)       and 𝑁0 = 4𝐶 ∗ (𝜀)‖𝑈 𝜀 ‖𝐻 𝑚 (Ω)          , for 𝑁 > 𝑁0 , we have the following
+inequality
+                                       1
+         ‖𝑇𝑁 (𝑣𝑁 ) − 𝑇𝑁 (𝑤𝑁 )‖𝐻 2 (Ω) ≤ ‖𝑣𝑁 − 𝑤𝑁 ‖𝐻 2 (Ω) . □
+                                       2
+
+Theorem 4.1. Assume that 𝑢𝜀 , 𝑈𝑏 ∈ 𝐻 𝑚 (Ω) (𝑚 > 2), let 𝜌1 = 2𝐶3 (𝜀)𝑁 2−𝑚 ‖𝑈 𝜀 ‖𝐻 𝑚 (Ω) . Then there exists 𝑁1 > 0 such that for 𝑁 ≥
+max{𝑁0 , 𝑁1 }, a unique solution 𝑈𝑁𝜀 to (3.9) exists in the ball 𝐵 (𝜌 ). Furthermore, the following error estimates hold
+                                                                   𝑁 1
+                                      (                           )
+     ‖𝑢𝜀 − 𝑢𝜀𝑁 ‖𝐻 2 (Ω) ≤ 𝐶3 (𝜀)𝑁 2−𝑚 ‖𝑢𝜀 ‖𝐻 𝑚 (Ω) + ‖𝑈𝑏 ‖𝐻 𝑚 (Ω) ,                                                            (4.18)
+         𝜀    𝜀
+                                      ( 𝜀                         )
+     ‖𝑢 − 𝑢𝑁 ‖𝐻 1 (Ω) ≤ 𝐶4 (𝜀)𝑁   1−𝑚
+                                       ‖𝑢 ‖𝐻 𝑚 (Ω) + ‖𝑈𝑏 ‖𝐻 𝑚 (Ω) ,                                                            (4.19)
+         𝜀    𝜀
+                         (                            )( 𝜀                         )
+     ‖𝑢 − 𝑢𝑁 ‖𝐿2 (Ω) ≤ 𝐶5 (𝜀)𝑁 + 𝐶6 (𝜀)𝑁
+                                   −𝑚            4−2𝑚
+                                                         ‖𝑢 ‖𝐻 𝑚 (Ω) + ‖𝑈𝑏 ‖𝐻 𝑚 (Ω) .                                          (4.20)
+
+                                                                  (                          )1∕(𝑚−2)
+Proof. Choose 𝜌1 = 2𝐶3 (𝜀)𝑁 2−𝑚 ‖𝑈 𝜀 ‖𝐻 𝑚 (Ω) and 𝑁2 = 8𝐶3 (𝜀)𝐶 ∗ (𝜀)‖𝑈 𝜀 ‖𝐻 𝑚 (Ω) , then for any 𝑁 ≥ max{𝑁0 , 𝑁2 }, we have that
+𝜌1 ≤ 𝜌0 , where 𝑁0 and 𝜌0 are constants coming from the proof of Lemma 4.6. And for any 𝑣𝑁 ∈ 𝐵𝑁 (𝜌1 ) ∈ 𝐵𝑁 (𝜌0 ), from Lemma 4.5
+and 4.6, there holds
+                                          ̃ 2,0 𝑈 𝜀 − 𝑇𝑁 (Π
+          ̃ 2,0 𝑈 𝜀 − 𝑇𝑁 (𝑣𝑁 )‖𝐻 2 (Ω) ≤ ‖Π
+         ‖Π                                                                          ̃ 2,0 𝑈 𝜀 ) − 𝑇𝑁 (𝑣𝑁 )‖𝐻 2 (Ω)
+                                                          ̃ 2,0 𝑈 𝜀 )‖𝐻 2 (Ω) + ‖𝑇𝑁 (Π
+            𝑁,Ω                             𝑁,Ω             𝑁,Ω                        𝑁,Ω
+                                                                         1 ̃ 2,0 𝜀
+                                            ≤ 𝐶3 (𝜀)𝑁 2−𝑚 ‖𝑈 𝜀 ‖𝐻 𝑚 (Ω) + ‖Π    𝑈 − 𝑣𝑁 ‖𝐻 2 (Ω)
+                                                                         2 𝑁,Ω
+                                            ≤ 𝜌1 .
+Hence, 𝑇𝑁 (𝑣𝑁 ) ∈ 𝐵𝑁 (𝜌1 ). Then, from Lemma 4.6, it follows that 𝑇𝑁 is a contracting mapping in the small neighborhood 𝐵𝑁 (𝜌1 ).
+According to the Banach ﬁxed-point theorem, the problem (3.9) has a unique solution 𝑈𝑁 𝜀 ∈ 𝐵 (𝜌 ). By the triangle inequality and
+                                                                                            𝑁 1
+the error estimates (4.1) with 𝜇 = 2, we obtain
+
+         ‖𝑈 𝜀 − 𝑈𝑁
+                 𝜀                                         ̃ 2,0 𝑈 𝜀 − 𝑈 𝜀 ‖𝐻 2 (Ω)
+                                     ̃ 2,0 𝑈 𝜀 ‖𝐻 2 (Ω) + ‖Π
+                   ‖𝐻 2 (Ω) ≤ ‖𝑈 𝜀 − Π 𝑁,Ω                   𝑁,Ω        𝑁
+
+                                 ≤ 𝐶𝑁 2−𝑚 ‖𝑈 𝜀 ‖𝐻 𝑚 (Ω) + 𝜌1
+                                 ≤ 𝐶3 (𝜀)𝑁 2−𝑚 ‖𝑈 𝜀 ‖𝐻 𝑚 (Ω) .
+    In order to derive the 𝐻1 -norm and 𝐿2 -norm error estimates, we now consider the linearization auxiliary problem (4.5). By setting
+𝑒 𝑁 = 𝑈 𝜀 − 𝑈𝑁 𝜀 and taking the inner product of 𝐿 (𝑤) and 𝑒 , from (2.4) and (3.9) with 𝑣 = 𝑣 = Π
+                                                   𝑢𝜀          𝑁                                   𝑁
+                                                                                                        ̃ 2,0 𝑤, using the mean value
+                                                                                                          𝑁,Ω
+theorem (4.3), Lemma 4.1 with 𝜇 = 2 and the divergence-free row property (4.2) of cof (𝐷2 𝑣), we have
+
+                                                                              632
+L. Jin, Z. Li, P. Wang et al.                                                                          Applied Numerical Mathematics 207 (2025) 621–641
+         (                )
+             𝐿𝑢𝜀 (𝑤), 𝑒𝑁 = 𝜀(Δ𝑤, Δ𝑒𝑁 ) + (Φ𝜀 𝐷𝑤, 𝐷𝑒𝑁 )
+                  = 𝜀(Δ𝑒𝑁 , Δ𝑤) + (Φ𝜀 𝐷𝑤, 𝐷𝑒𝑁 ) − 𝜀(Δ𝑒𝑁 , ΔΠ    ̃ 2,0 𝑤)
+                                                                  𝑁,Ω
+                                ( (               )      (               ) 2,0 )
+                            + det 𝐷2 (𝑈 𝜀 + 𝑈𝑏 ) − det 𝐷2 (𝑈𝑁   𝜀           ̃
+                                                                   + 𝑈𝑏 ) , Π     𝑤                                                            (4.21)
+                                                                              𝑁,Ω
+                       (                       ) ( 𝜀                        )
+                  = 𝜀 Δ𝑒𝑁 , Δ(𝑤 − Π    ̃ 2,0
+                                             𝑤) + Φ 𝐷𝑒𝑁 , 𝐷(𝑤 − Π  ̃ 2,0
+                                                                         𝑤)
+                                         𝑁,Ω                         𝑁,Ω
+                                ( 𝜀                       )
+                            + (Φ − Φ𝜀3 )𝐷𝑒𝑁 , 𝐷Π   ̃ 2,0
+                                                         𝑤 ,
+                                                     𝑁,Ω
+               (                                       )
+where Φ𝜀3 = cof 𝜏𝐷2 (𝑈 𝜀 + 𝑈𝑏 ) + (1 − 𝜏)𝐷2 (𝑈𝑁𝜀 + 𝑈 ) . By (4.13), we have
+                                                     𝑏
+                                 (        )     (                                      )
+                                                                               𝜀
+         ‖Φ𝜀 − Φ𝜀3 ‖𝐿2 (Ω) = ‖cof 𝐷2 (𝑢𝜀 ) − cof 𝜏𝐷2 (𝑈 𝜀 + 𝑈𝑏 ) + (1 − 𝜏)𝐷2 (𝑈𝑁 + 𝑈𝑏 ) ‖𝐿2 (Ω)
+                                                                            𝜀
+                                = ‖𝐷2 (𝑢𝜀 ) − 𝜏𝐷2 (𝑈 𝜀 + 𝑈𝑏 ) − (1 − 𝜏)𝐷2 (𝑈𝑁 + 𝑈𝑏 )‖𝐿2 (Ω)
+                                           𝜀
+                                ≤ 𝐶‖𝑈 𝜀 − 𝑈𝑁 ‖𝐻 2 (Ω) .
+
+   Let 𝑞 = −Δ𝑒𝑁 and assume 𝑤 ∈ 𝐻 3 (Ω), then we obtain ‖𝑤‖𝐻 3 (Ω) ≤ 𝐶𝜀−2 ‖𝑒𝑁 ‖𝐻 1 (Ω) from [21]. Additionally, from (4.18), for 𝑁
+suﬃciently large, we observe that ‖Φ𝜀 − Φ3 ‖𝐿2 (Ω) → 0. So multiplying both sides of (4.5) by 𝑒𝑁 and integrating over the region Ω,
+then by the embedding 𝐻 1 (Ω) ↪ 𝐿4 (Ω), Lemma 4.1 with 𝜇 = 2 and the Hölder’s inequality, we obtain
+
+                                                                                               ̃ 2,0 𝑤‖𝐿∞ (Ω)
+                                             ̃ 2,0 𝑤)‖𝐿2 (Ω) + ‖Φ𝜀 − Φ3 ‖𝐿2 (Ω) ‖𝐷𝑒𝑁 ‖𝐿2 (Ω) ‖𝐷Π
+         (𝐷𝑒𝑁 , 𝐷𝑒𝑁 ) ≤ 𝜀‖Δ𝑒𝑁 ‖𝐿2 (Ω) ‖Δ(𝑤 − Π 𝑁,Ω                                               𝑁,Ω
+                                                                          ̃ 2,0 𝑤)‖𝐿4 (Ω)
+                                        + ‖Φ𝜀 ‖𝐿2 (Ω) ‖𝐷𝑒𝑁 ‖𝐿4 (Ω) ‖𝐷(𝑤 − Π 𝑁,𝜔
+                                                                                                  ̃ 2,0 𝑤‖𝐿∞ (Ω)
+                                                ̃ 2,0 𝑤‖𝐻 2 (Ω) + ‖Φ𝜀 − Φ3 ‖𝐿2 (Ω) ‖𝑒𝑁 ‖𝐻 1 (Ω) ‖𝐷Π
+                           ≤ 𝜀‖𝑒𝑁 ‖𝐻 2 (Ω) ‖𝑤 − Π 𝑁,Ω                                               𝑁,Ω
+                                   + ‖Φ𝜀 ‖𝐿2 (Ω) ‖𝑒𝑁 ‖𝐻 2 (Ω) ‖𝑤 − Π̃ 2,0 𝑤‖𝐻 2 (Ω)
+                                                                      𝑁,𝜔
+                                    (            )
+                           ≤𝑁                                                                               ̃ 2,0 𝑤‖𝐿∞ (Ω)
+                                  𝜀 + ‖Φ𝜀 ‖𝐿2 (Ω) ‖𝑒𝑁 ‖𝐻 2 (Ω) ‖𝑤‖𝐻 3 (Ω) + ‖Φ𝜀 − Φ3 ‖𝐿2 (Ω) ‖𝑒𝑁 ‖𝐻 1 (Ω) ‖𝐷Π
+                                 −1
+                                                                                                              𝑁,Ω
+                            (                                              )
+                           ≤ 𝐶4 (𝜀)𝑁 1−𝑚 + 𝐶3 (𝜀)𝑁 2−𝑚 ‖𝐷Π   ̃ 2,0 𝑤‖𝐿∞ (Ω) ‖𝑈 𝜀 ‖𝐻 𝑚 (Ω) ‖𝑒𝑁 ‖𝐻 1 (Ω) ,
+                                                               𝑁,Ω
+
+where 𝐶4 (𝜀) = 𝑂(𝜀−4 ). And using the inverse inequality (see Theorem 4.76 of [43]), we obtain
+                                        √                              √
+           ̃ 2,0 𝑤‖𝐿∞ (Ω) ≤ 𝐶
+         ‖𝐷Π                                        ̃ 2,0 𝑤‖𝐻 2 (Ω) ≤ 𝐶 ln (𝑁 + 1)‖𝑤‖𝐻 3 (Ω) .
+                                         ln (𝑁 + 1)‖Π
+             𝑁,Ω                                      𝑁,Ω
+
+Due to 𝑒𝑁 ∈ 𝐻01 (Ω), by the Poincaré inequality, we have
+                                                             √
+         ‖𝑒𝑁 ‖𝐻 1 (Ω) ≤ 𝐶4 (𝜀)𝑁 1−𝑚 ‖𝑈 𝜀 ‖𝐻 𝑚 (Ω) + 𝐶3 (𝜀)𝜀−2 ln (𝑁 + 1)𝑁 2−𝑚 ‖𝑈 𝜀 ‖𝐻 𝑚 (Ω) ‖𝑒𝑁 ‖𝐻 1 (Ω) .
+When 𝑚 > 2, there exists an 𝑁1 satisfying 𝑁1 > 𝑁2 , such that for 𝑁 ≥ max{𝑁0 , 𝑁1 }, the following inequality holds
+                  √
+         𝐶3 (𝜀)𝜀−2 ln (𝑁 + 1)𝑁 2−𝑚 ‖𝑈 𝜀 ‖𝐻 𝑚 (Ω) ≤ 1∕2.
+Then, we have
+
+         ‖𝑒𝑁 ‖𝐻 1 (Ω) ≤ 𝐶4 (𝜀)𝑁 1−𝑚 ‖𝑈 𝜀 ‖𝐻 𝑚 (Ω) .
+
+   Let 𝑞 = 𝑒𝑁 and assume 𝑤 ∈ 𝐻 4 (Ω), then we have ‖𝑤‖𝐻 4 (Ω) ≤ 𝐶𝜀−3 ‖𝑒𝑁 ‖𝐿2 (Ω) from [21]. From (4.21) and (4.18), by the embedding
+𝐻 (Ω) ↪ 𝐿4 (Ω), Lemma 4.1 with 𝜇 = 2 and the Hölder’s inequality, then we have
+ 1
+
+
+                                                                                             ̃ 2,0 𝑤‖𝐿4 (Ω)
+                                           ̃ 2,0 𝑤)‖𝐿2 (Ω) + ‖Φ𝜀 − Φ3 ‖𝐿2 (Ω) ‖𝐷𝑒𝑁 ‖𝐿4 (Ω) ‖𝐷Π
+         (𝑒𝑁 , 𝑒𝑁 ) ≤ 𝜀‖Δ𝑒𝑁 ‖𝐿2 (Ω) ‖Δ(𝑤 − Π 𝑁,Ω                                               𝑁,Ω
+                              + ‖Φ𝜀 ‖𝐿2 (Ω) ‖𝐷𝑒𝑁 ‖𝐿4 (Ω) ‖𝐷(𝑤 − Π ̃ 2,0 𝑤)‖𝐿4 (Ω)
+                                                                    𝑁,Ω
+                          ( −2                                      )
+                      ≤ 𝐶 𝑁 (𝜀 + ‖Φ𝜀 ‖𝐿2 (Ω) ) + ‖Φ𝜀 − Φ3 ‖𝐿2 (Ω) ‖𝑤‖𝐻 4 ‖𝑒𝑁 ‖𝐻 2 (Ω)
+                            ( 1                            )
+                      ≤ 𝐶𝜀−3 𝜀− 2 𝑁 −2 + ‖Φ𝜀 − Φ3 ‖𝐿2 (Ω) ‖𝑒𝑁 ‖𝐿2 (Ω) ‖𝑒𝑁 ‖𝐻 2 (Ω)
+                        (                                                     )
+                      ≤ 𝐶5 (𝜀)𝑁 −𝑚 ‖𝑈 𝜀 ‖𝐻 𝑚 (Ω) + 𝐶6 (𝜀)𝑁 4−2𝑚 ‖𝑈 𝜀 ‖2𝐻 𝑚 (Ω) ‖𝑒𝑁 ‖𝐿2 (Ω) ,
+
+where 𝐶5 (𝜀) = 𝑂(𝜀−5 ) and 𝐶6 (𝜀) = 𝑂(𝜀−6 ). Consequently, we conclude that
+
+         ‖𝑒𝑁 ‖𝐿2 (Ω) ≤ 𝐶5 (𝜀)𝑁 −𝑚 ‖𝑈 𝜀 ‖𝐻 𝑚 (Ω) + 𝐶6 (𝜀)𝑁 4−2𝑚 ‖𝑈 𝜀 ‖2𝐻 𝑚 (Ω) .
+Finally, utilizing the triangle inequality, we obtain the desired conclusions.              □
+
+Remark 3. Among the error estimates presented in this section, both the 𝐻 1 - and 𝐻 2 -norms provide optimal error estimates. Addi-
+tionally, when 𝑚 ≥ 4, the 𝐿2 -norm error estimate also yields an optimal error estimate.
+
+                                                                             633
+L. Jin, Z. Li, P. Wang et al.                                                                                              Applied Numerical Mathematics 207 (2025) 621–641
+
+
+                                            Table 5.1
+                                            The errors for ﬁxed 𝑁 = 15 concerning 𝜀.
+
+                                              𝑝(𝜀 = 10−𝑝 )    ‖𝑢 − 𝑢𝜀𝑁 ‖𝐿∞ (Ω)
+                                                                            ̃    ‖𝑢 − 𝑢𝜀𝑁 ‖𝐿2 (Ω)
+                                                                                               ̃    ‖𝑢 − 𝑢𝜀𝑁 ‖𝐻 1 (Ω)
+                                                                                                                   ̃    ‖𝑢 − 𝑢𝜀𝑁 ‖𝐻 2 (Ω)
+                                                                                                                                       ̃
+
+                                              0               1.61E-01           1.77E-01           8.37E-01            4.72
+                                              1               1.04E-01           1.19E-01           5.75E-01            3.70
+                                              2               1.83E-02           2.58E-02           1.55E-01            2.10
+                                              3               2.03E-03           3.12E-03           3.10E-02            1.17
+                                              4               2.54E-04           3.34E-04           6.10E-03            5.74E-01
+                                              5               3.24E-05           3.54E-05           1.05E-03            1.27E-01
+                                              6               3.40E-06           3.62E-06           1.19E-04            1.48E-02
+                                              7               3.41E-07           3.63E-07           1.21E-05            1.50E-03
+                                              8               3.42E-08           3.63E-08           1.21E-06            1.50E-04
+                                              9               3.42E-09           3.63E-09           1.21E-07            1.50E-05
+                                              10              3.42E-10           3.63E-10           1.21E-08            1.50E-06
+
+
+
+
+                                Fig. 5.1. Left: convergence curves for diﬀerent 𝜀, right: error of the numerical solution for varying values of 𝑁 .
+
+
+5. Numerical experiments
+
+    In this section, we present four numerical examples to demonstrate the eﬃciency and accuracy of the numerical schemes discussed
+in the preceding sections. The ﬁrst two examples involve problems with smooth solutions, while the third example considers a problem
+with corner singularities. The computational domain for Example 1-3 is Ω      ̃ = (0, 1) × (0, 1), Example 4 is a convex quadrilateral
+region Ω ̄ . These examples will be used to highlight the advantages of the numerical schemes discussed earlier in obtaining diﬀerent
+regularization solutions. All experiments are conducted in MATLAB 2022b, which is equipped with an AMD R7 5800H processor with
+16 GB of RAM.
+
+5.1. Example 1. Radial smooth source
+
+                                                                                          𝑥2 +𝑦2
+      We select functions 𝑓 (𝑥, 𝑦) = (1 + 𝑥2 + 𝑦2 )𝑒𝑥 +𝑦 and 𝑔(𝑥, 𝑦) = 𝑒
+                                                                2    2
+                                                                                             2   . This choice ensures that the smooth radial function 𝑢(𝑥, 𝑦) =
+    𝑥2 +𝑦2
+𝑒      2       ̃ and serves as the unique convex classical (and viscosity) solution of the problem (1.1).
+        ∈ 𝐶 ∞ (Ω)
+      We construct the function 𝑈𝑏 (𝑥, 𝑦) using (2.3), where
+                                 𝑦2     1+𝑦2        ( 𝑥2                1)  ( 1+𝑥2          1     )
+             𝑈𝑏 (𝑥, 𝑦) = (1 − 𝑥)𝑒 2 + 𝑥𝑒 2 + (1 − 𝑦) 𝑒 2 − (1 − 𝑥) − 𝑥𝑒 2 +𝑦 𝑒 2 − (1 − 𝑥)𝑒 2 − 𝑒𝑥 ,
+and set 𝑢𝜀 (𝑥, 𝑦) = 𝑈 𝜀 (𝑥, 𝑦) + 𝑈𝑏 (𝑥, 𝑦) in (2.1).
+   For the smooth cases, we primarily employ the Legendre-Galerkin method discussed in section 3.1 to address this problem. In
+Table 5.1, we present errors concerning 𝜀 = 10−𝑝 with a ﬁxed 𝑁 = 15 in diﬀerent norms, where 𝑢𝜀𝑁 represents the numerical solution
+                                                                                                            3                                  1
+to (2.1). The results indicate that ‖𝑢 − 𝑢𝜀𝑁 ‖𝐿2 (Ω)                 𝜀
+                                                   ̃ ≈ 𝑂(𝜀), ‖𝑢 − 𝑢𝑁 ‖𝐻 1 (Ω)
+                                                                                                  𝜀
+                                                                                                          ̃ ≈ 𝑂(𝜀 4 ), which are consistent
+                                                                            ̃ ≈ 𝑂(𝜀 4 ) and ‖𝑢 − 𝑢𝑁 ‖𝐻 2 (Ω)
+with the error estimates.
+    In the left panel of Fig. 5.1, convergence curves are plotted with respect to 𝜀 for a ﬁxed 𝑁 = 15 in diﬀerent norms. The curves
+illustrate that as 𝜀 → 0, the solution 𝑢𝜀 converges to the convex viscosity solution of the Monge-Ampère equation. Leveraging this
+observation, a multiple-level framework can be employed to reduce computational costs and eﬀectively mitigate the impact of matrix
+conditions. We take 𝑁 = 4, 6, 8, 10, 12 corresponds to 𝑝 = 5, 7, 9, 11, 13 when employing the Legendre-Galerkin method, while choosing
+𝑁 = 12, 14, 16, 18, 20 corresponds to 𝑝 = 5, 7, 9, 11, 13 when using the GLOFs-Galerkin method with 𝛽 = 6.
+    The convergence curves (measured by 𝐿2 error) of the numerical solutions for two diﬀerent methods are presented in the right
+panel of Fig. 5.1. Additionally, Table 5.2 compares the error results obtained from the two diﬀerent methods. Numerical results
+
+                                                                                        634
+L. Jin, Z. Li, P. Wang et al.                                                                                     Applied Numerical Mathematics 207 (2025) 621–641
+
+
+                                Table 5.2
+                                The numerical results for varying values of 𝑁 .
+
+                                  N     Legendre-Galerkin method                        GLOFs-Galerkin method
+                                        ‖𝑢 − 𝑢𝑁 ‖𝐿2 (Ω)
+                                                     ̃    ‖𝑢 − 𝑢𝑁 ‖𝐻 1 (Ω)
+                                                                        ̃    cpu(s)     ‖𝑢 − 𝑢𝑁 ‖𝐿2 (Ω)
+                                                                                                     ̃    ‖𝑢 − 𝑢𝑁 ‖𝐻 1 (Ω)
+                                                                                                                        ̃    cpu(s)
+
+                                  2     4.70E-03          3.37E-02           0.0077     6.35E-03          3.86E-02           0.0026
+                                  6     6.21E-07          1.38E-05           0.0083     2.53E-04          5.18E-03           0.0056
+                                  10    3.28E-11          1.22E-09           0.0173     1.84E-05          6.42E-04           0.0214
+                                  14    1.04E-15          4.44E-14           0.0186     1.76E-06          9.48E-05           0.0527
+                                  18    4.07E-16          7.88E-16           0.0263     1.33E-07          1.32E-05           0.1725
+                                  22    4.30E-16          7.79E-16           0.0584     8.13E-09          1.82E-06           0.2393
+                                  26    4.36E-16          8.26E-16           0.0947     4.63E-10          3.00E-07           0.3891
+                                  30    4.25E-16          8.10E-16           0.1477     2.80E-11          5.61E-08           0.6209
+                                  34    4.11E-16          8.17E-16           0.2913     1.94E-12          1.12E-08           1.0860
+                                  38    4.21E-16          9.55E-16           0.4874     1.49E-13          2.32E-09           1.6429
+
+
+
+
+                                   Fig. 5.2. Left: the numerical solution with 𝑁 = 18, right: the corresponding error distribution.
+
+
+
+demonstrate the eﬀectiveness of the Legendre-Galerkin method, particularly for smooth solutions. Interestingly, while the GLOFs-
+Galerkin method is originally designed for singular problems, it can also be successfully applied to non-singular problems.
+   In the left panel of Fig. 5.2, we present the numerical solution. Additionally, the error distribution obtained with 𝑁 = 18 using
+the Legendre-Galerkin method is illustrated in the right panel of Fig. 5.2.
+
+5.2. Example 2. Surface of a sphere
+
+                                      𝑅2
+                                                                       √                                                       √
+     We choose 𝑓 (𝑥, 𝑦) =                         and 𝑔(𝑥, 𝑦) = − 𝑅2 − 𝑥2 − 𝑦2 . Consequently, when 𝑅 >                            2, the function 𝑢(𝑥, 𝑦) = −
+                                 (𝑅2 −𝑥2 −𝑦2 )2
+√
+                        ̃ stands as the unique convex classical (and viscosity) solution to the problem (1.1).
+    𝑅2 − 𝑥2 − 𝑦2 ∈ 𝐶 ∞ (Ω)
+     We construct the function 𝑈𝑏 (𝑥, 𝑦) using (2.3), where
+                                        1                   1          (           1
+         𝑈𝑏 (𝑥, 𝑦) = −(1 − 𝑥)(𝑅2 − 𝑦2 ) 2 − 𝑥(𝑅2 − 1 − 𝑦2 ) 2 − (1 − 𝑦) (𝑅2 − 𝑥2 ) 2 −
+                                             1)  (                1                    1         1)
+                      𝑅(1 − 𝑥) − 𝑥(𝑅2 − 1) 2 −𝑦 (𝑅2 − 1 − 𝑥2 ) 2 − (1 − 𝑥)(𝑅2 − 1) 2 − 𝑥(𝑅2 − 2) 2 ,
+and set 𝑢𝜀 (𝑥, 𝑦) = 𝑈 𝜀 (𝑥, 𝑦) + 𝑈𝑏 (𝑥, 𝑦) in (2.1).
+    When we take 𝑅 = 2, the solution of the problem is smooth. Similar to Example 1, we primarily employ the Legendre-Galerkin
+method to solve the problem. As expected, the vanishing moment approximation accurately captures the convex viscosity solution,
+as demonstrated in Fig. 5.3 and Table 5.3.
+    We compare the diﬀerences between the two methods on smooth problems in Table 5.4. The parameter settings are the same
+                                               13
+as those in Example 1, except that 𝛽 =            in GLOFs-Galerkin method. The results indicate that spectral accuracy can be gradually
+                                                2
+achieved with the increase of 𝑁 .
+    In the left panel of Fig. 5.4, we present the numerical solution. Additionally, the error distribution obtained with 𝑁 = 18 using
+the Legendre-Galerkin method is illustrated in the right panel of Fig. 5.4.
+
+5.3. Example 3. Blow-up of the source function
+
+   We take 𝑓 (𝑥, 𝑦) = 4𝛼 2 (2𝛼 − 1)(𝑥2 + 𝑦2 )2𝛼−2 and 𝑔(𝑥, 𝑦) = (𝑥2 + 𝑦2 )𝛼 . Consequently, the function 𝑢(𝑥, 𝑦) = (𝑥2 + 𝑦2 )𝛼 serves as a
+unique convex solution to the problem (1.1).
+
+                                                                                  635
+L. Jin, Z. Li, P. Wang et al.                                                                                                        Applied Numerical Mathematics 207 (2025) 621–641
+
+
+
+
+                                Fig. 5.3. Left: the convergence curves with diﬀerent 𝜀, right: the error of the numerical solution with varying 𝑁 .
+
+
+                                             Table 5.3
+                                             The errors concerning 𝜀 with ﬁxed 𝑁 = 15.
+
+                                               𝑝(𝜀 = 10−𝑝 )      ‖𝑢 − 𝑢𝜀𝑁 ‖𝐿∞ (Ω)
+                                                                               ̃      ‖𝑢 − 𝑢𝜀𝑁 ‖𝐿2 (Ω)
+                                                                                                    ̃        ‖𝑢 − 𝑢𝜀𝑁 ‖𝐻 1 (Ω)
+                                                                                                                            ̃     ‖𝑢 − 𝑢𝜀𝑁 ‖𝐻 2 (Ω)
+                                                                                                                                                 ̃
+
+                                               0                 5.68E-02             6.29E-02               2.92E-01             1.51
+                                               1                 4.91E-02             5.50E-02               2.56E-01             1.37
+                                               2                 1.78E-02             2.22E-02               1.10E-01             8.24E-01
+                                               3                 1.95E-03             3.25E-03               2.25E-02             4.44E-01
+                                               4                 2.06E-04             3.61E-04               4.21E-03             2.44E-01
+                                               5                 2.65E-05             3.79E-05               8.27E-04             9.16E-02
+                                               6                 3.02E-06             3.91E-06               1.11E-04             1.35E-02
+                                               7                 3.10E-07             3.94E-07               1.16E-05             1.41E-03
+                                               8                 3.11E-08             3.94E-08               1.16E-06             1.42E-04
+                                               9                 3.11E-09             3.94E-09               1.16E-07             1.42E-05
+                                               10                3.11E-10             3.94E-10               1.16E-08             1.42E-06
+
+
+
+                                      Table 5.4
+                                      The numerical results for varying values of 𝑁 .
+
+                                        N      Legendre-Galerkin method                                  GLOFs-Galerkin method
+                                               ‖𝑢 − 𝑢𝑁 ‖𝐿2 (Ω)
+                                                            ̃      ‖𝑢 − 𝑢𝑁 ‖𝐻 1 (Ω)
+                                                                                 ̃      cpu(s)           ‖𝑢 − 𝑢𝑁 ‖𝐿2 (Ω)
+                                                                                                                      ̃      ‖𝑢 − 𝑢𝑁 ‖𝐻 1 (Ω)
+                                                                                                                                           ̃      cpu(s)
+
+                                        2      6.16E-04            4.51E-03             0.0162           8.90E-04            5.14E-03             0.0210
+                                        6      6.37E-07            1.33E-05             0.0138           4.68E-05            8.27E-04             0.0149
+                                        10     8.68E-10            2.94E-08             0.0181           3.73E-06            1.24E-04             0.0239
+                                        14     1.28E-12            6.04E-11             0.0219           4.34E-07            2.12E-05             0.0584
+                                        18     1.99E-15            1.20E-13             0.0313           4.42E-08            3.73E-06             0.1778
+                                        22     3.72E-16            6.68E-16             0.0637           3.67E-09            5.99E-07             0.2464
+                                        26     3.47E-16            5.64E-16             0.1054           2.79E-10            1.09E-07             0.4000
+                                        30     4.00E-16            6.75E-16             0.1531           2.28E-11            2.29E-08             0.6101
+                                        34     3.65E-16            5.63E-16             0.2905           2.47E-12            5.40E-09             1.0039
+                                        38     3.53E-16            5.96E-16             0.5026           4.39E-13            1.53E-09             1.6801
+
+
+
+
+                                  Fig. 5.4. Left: the numerical solution with 𝑁 = 18, right: the corresponding error distribution with 𝑁 = 18.
+
+
+                                                                                             636
+L. Jin, Z. Li, P. Wang et al.                                                                                             Applied Numerical Mathematics 207 (2025) 621–641
+
+
+                                       Table 5.5
+                                       The error of the numerical solution for varying values of 𝑁 .
+
+                                         𝑁      ‖𝑢 − 𝑢𝜀𝑁 ‖𝐿∞ (Ω)
+                                                              ̃    ‖𝑢 − 𝑢𝜀𝑁 ‖𝐿2 (Ω)
+                                                                                 ̃     ‖𝑢 − 𝑢𝜀𝑁 ‖𝐻 1 (Ω)
+                                                                                                      ̃    ‖𝑢 − 𝑢𝜀𝑁 ‖𝐻 2 (Ω)
+                                                                                                                          ̃    cpu(s)
+
+                                         3      5.85E-04           7.34E-04            7.24E-03            1.39E-01            0.1605
+                                         8      3.81E-06           1.97E-06            5.30E-05            4.19E-03            0.0233
+                                         13     1.89E-07           6.89E-08            2.59E-06            5.20E-04            0.0530
+                                         18     2.69E-08           7.16E-09            3.89E-07            1.26E-04            0.1482
+                                         23     5.78E-09           1.30E-09            1.01E-07            4.31E-05            0.1656
+                                         28     1.64E-09           3.33E-10            3.49E-08            1.81E-05            0.2469
+                                         33     5.68E-10           1.06E-10            1.45E-08            8.71E-06            0.3789
+                                         38     2.27E-10           3.97E-11            6.83E-09            4.64E-06            0.6635
+                                         43     1.02E-10           1.68E-11            3.53E-09            2.67E-06            1.0790
+                                         48     4.95E-11           7.80E-12            1.96E-09            1.63E-06            1.7758
+                                         53     2.59E-11           3.91E-12            1.15E-09            1.04E-06            3.2581
+                                         58     1.43E-11           2.08E-12            7.07E-10            6.93E-07            5.1858
+
+
+
+
+                   Fig. 5.5. Left: the numerical solution with 𝑁 = 55 for 𝛼 = 5∕3, right: the corresponding error distribution with 𝑁 = 55 for 𝛼 = 5∕3.
+
+
+
+    We construct the function 𝑈𝑏 (𝑥, 𝑦) using (2.3) and set 𝑢𝜀 (𝑥, 𝑦) = 𝑈 𝜀 (𝑥, 𝑦) + 𝑈𝑏 (𝑥, 𝑦) in (2.1), where
+                                                       (       ) (                            )
+         𝑈𝑏 (𝑥, 𝑦) = (1 − 𝑥)𝑦2𝛼 + 𝑥(1 + 𝑦2 )𝛼 + (1 − 𝑦) 𝑥2𝛼 − 𝑥 +𝑦 (1 + 𝑥2 )𝛼 − (1 − 𝑥) − 2𝛼 𝑥 .
+                                  5
+    When we choose 𝛼 = , the derivative of the function exhibits a weak singularity at the node (0, 0). In order to obtain a more
+                             3
+accurate approximation for the problem, we utilize the Legendre-Galerkin method within the multiple-level framework, taking 𝑁 =
+5, 8, 11, 14, 17, 20 corresponding to 𝑝 = 3, 5, 7, 9, 11, 13. The numerical results are summarized in Table 5.5, and the numerical solution
+along with the error distribution is presented in Fig. 5.5.
+    When 𝛼 < 1, the solution 𝑢 displays a corner singularity at the node (0, 0). Traditional spectral methods relying on orthogonal
+polynomials often fall short in achieving satisfactory accuracy and convergence rates. As demonstrated in the right panel of Fig. 5.6,
+the Legendre-Galerkin method does not yield optimal results. In contrast, the GLOFs-Galerkin method demonstrates a signiﬁcant
+advantage in this scenario. As depicted in the left panel of Fig. 5.6, superior results with an error accuracy beyond 10−10 and spectral
+convergence can be achieved.
+    We evaluate the performance of two Galerkin methods for problems with corner singularities. By setting 𝛼 = 3∕4, we compare
+the numerical results with respect to 𝜀 (where 𝜀 = 10−𝑝 ) with a ﬁxed 𝑁 = 20 in various norms, as detailed in Table 5.6. To better
+highlight the advantages of the GLOFs-Galerkin method in addressing problems with corner singularities, we conduct a comparative
+analysis with another approach for solving a problem with 𝛼 = 0.9 (see Table 5.7). In the GLOFs-Galerkin method, we selected the
+GLOFs basis function with 𝛽 = 9, opting for 𝑁 = 10, 12, 14, 16, 18, 20 corresponding to 𝑝 = 3, 5, 7, 9, 11, 13 within the multiple-level
+framework.
+    We then summarize the numerical results for the problem with 𝛼 = 0.75 in Table 5.8.
+                                                                                           2
+    Finally, we depict the error distribution with 𝛽 = 10 for problems involving 𝛼 = and 𝛼 = 0.6 in Fig. 5.9. Despite the heightened
+                                                                                           3
+singularity of the function at the point (0, 0) as 𝛼 decreases, the GLOFs-Galerkin method consistently yields a superior numerical
+solution.
+
+5.4. Example 4. Radial smooth source on quadrilaterals
+
+  In this example, leveraging the variable transformation as detailed in the literature [32] and [49], we extend the Legendre-Galerkin
+method to arbitrary convex quadrilateral regions. We take the domain Ω    ̄ with the vertices 𝑄1 = (0, 0), 𝑄2 = (2, 0), 𝑄3 = (1, 3), and
+                                                                                                                      (1 + 𝑥2 + 𝑦2 )𝑒𝑥 +𝑦
+                                                                                                                  1                                                  2   2
+𝑄4 = (−1, 2), see the left panel of Fig. 5.10. We employ the same test function as in Example 1, with 𝑓 (𝑥, 𝑦) = 2500
+
+                                                                                      637
+L. Jin, Z. Li, P. Wang et al.                                                                                                     Applied Numerical Mathematics 207 (2025) 621–641
+
+
+
+
+Fig. 5.6. Left: the convergence curves with diﬀerent 𝛼 for the GLOFs-Galerkin method with 𝛽 = 9, right: the convergence curves with diﬀerent 𝛼 for the Legendre-
+Galerkin method.
+
+
+                                        Table 5.6
+                                        The errors concerning 𝜀 with ﬁxed 𝑁 = 20.
+
+                                          𝑝(𝜀 = 10−𝑝 )      Legendre-Galerkin method                    GLOFs-Galerkin method
+                                                            ‖𝑢 − 𝑢𝑁 ‖𝐿2 (Ω)
+                                                                         ̃       ‖𝑢 − 𝑢𝑁 ‖𝐻 1 (Ω)
+                                                                                               ̃        ‖𝑢 − 𝑢𝑁 ‖𝐿2 (Ω)
+                                                                                                                     ̃        ‖𝑢 − 𝑢𝑁 ‖𝐻 1 (Ω)
+                                                                                                                                            ̃
+
+                                          0                 1.52E-01             7.11E-01               9.41E-02              4.42E-01
+                                          1                 1.16E-01             5.48E-01               6.65E-02              3.20E-01
+                                          2                 3.15E-02             1.69E-01               1.57E-02              9.29E-02
+                                          3                 4.09E-03             3.15E-02               1.99E-03              1.87E-02
+                                          4                 4.47E-04             5.29E-03               2.15E-04              3.48E-03
+                                          5                 5.07E-05             1.32E-03               2.22E-05              5.42E-04
+                                          6                 1.43E-05             1.09E-03               2.32E-06              7.03E-05
+                                          7                 1.24E-05             1.11E-03               4.94E-07              2.23E-05
+
+
+
+                                 Table 5.7
+                                 Numerical results with 𝛼 = 0.9 using 𝛽 = 9.
+
+                                   N      Legendre-Galerkin method                                  GLOFs-Galerkin method
+                                          ‖𝑢 − 𝑢𝑁 ‖𝐿2 (Ω)
+                                                       ̃      ‖𝑢 − 𝑢𝑁 ‖𝐻 1 (Ω)
+                                                                            ̃       cpu(s)          ‖𝑢 − 𝑢𝑁 ‖𝐿2 (Ω)
+                                                                                                                 ̃        ‖𝑢 − 𝑢𝑁 ‖𝐻 1 (Ω)
+                                                                                                                                        ̃        cpu(s)
+
+                                   3      8.17E-04            5.78E-03              0.1587          1.95E-03              1.15E-02               0.1637
+                                   8      5.25E-05            1.03E-03              0.0185          7.19E-05              1.26E-03               0.0312
+                                   13     8.65E-06            3.56E-04              0.0449          3.15E-06              1.09E-04               0.0687
+                                   18     2.51E-06            1.72E-04              0.1335          3.17E-07              1.74E-05               0.2162
+                                   23     9.82E-07            9.77E-05              0.1932          4.21E-08              4.12E-06               0.3089
+                                   28     4.62E-07            6.15E-05              0.2707          4.92E-09              8.79E-07               0.5120
+                                   33     2.46E-07            4.16E-05              0.4183          5.04E-10              1.92E-07               0.8920
+                                   38     1.43E-07            2.96E-05              0.7436          4.96E-11              4.77E-08               1.7229
+                                   43     8.93E-08            2.19E-05              1.2496          5.11E-12              1.29E-08               3.0535
+                                   48     5.87E-08            1.67E-05              2.0265          5.85E-13              3.66E-09               4.9581
+
+
+
+
+                   Fig. 5.7. Left: the numerical solution with 𝑁 = 48 for 𝛼 = 0.9, right: the corresponding error distribution with 𝑁 = 48 for 𝛼 = 0.9.
+
+
+                                                                                        638
+L. Jin, Z. Li, P. Wang et al.                                                                                         Applied Numerical Mathematics 207 (2025) 621–641
+
+
+                                  Table 5.8
+                                  Numerical results obtained with 𝛼 = 0.75 using 𝛽 = 9.
+
+                                    N     Legendre-Galerkin method                          GLOFs-Galerkin method
+                                          ‖𝑢 − 𝑢𝑁 ‖𝐿2 (Ω)
+                                                       ̃    ‖𝑢 − 𝑢𝑁 ‖𝐻 1 (Ω)
+                                                                          ̃    cpu(s)       ‖𝑢 − 𝑢𝑁 ‖𝐿2 (Ω)
+                                                                                                         ̃    ‖𝑢 − 𝑢𝑁 ‖𝐻 1 (Ω)
+                                                                                                                            ̃      cpu(s)
+
+                                    4     1.37E-03          1.27E-02           0.1549       4.16E-03          2.90E-02             0.0144
+                                    9     1.57E-04          4.00E-03           0.0186       1.53E-04          3.39E-03             0.0336
+                                    14    3.92E-05          2.03E-03           0.0562       5.16E-06          2.47E-04             0.0891
+                                    19    1.45E-05          1.21E-03           0.1644       4.37E-07          2.99E-05             0.2979
+                                    24    6.75E-06          8.03E-04           0.2033       5.70E-08          6.85E-06             0.3856
+                                    29    3.62E-06          5.70E-04           0.2979       6.51E-09          1.48E-06             0.6842
+                                    34    2.15E-06          4.25E-04           0.5269       6.50E-10          3.36E-07             1.3375
+                                    39    1.37E-06          3.29E-04           0.9060       6.37E-11          8.62E-08             2.6000
+                                    44    9.26E-07          2.62E-04           1.5783       8.16E-12          2.55E-08             4.6951
+
+
+
+
+                  Fig. 5.8. Left: the numerical solution with 𝑁 = 44 for 𝛼 = 0.75, right: the corresponding error distribution with 𝑁 = 44 for 𝛼 = 0.75.
+
+
+
+
+                                                                                        2
+Fig. 5.9. Left: the error distribution of the numerical solution with 𝑁 = 44 for 𝛼 = , right: the error distribution of the numerical solution with 𝑁 = 44 for 𝛼 = 0.6.
+                                                                                        3
+
+
+                         𝑥2 +𝑦2                                                                                        𝑥2 +𝑦2
+                    1
+and 𝑔(𝑥, 𝑦) = 𝑒 2 . This choice ensures that the smooth radial function 𝑢(𝑥, 𝑦) = 𝑒 2
+                                                                                                                  1                     ̄ and serves as the unique
+                                                                                                                                 ∈ 𝐶 ∞ (Ω)
+              50                                                                      50
+convex classical (and viscosity) solution of the problem (1.1).
+   Review the variable transformation in [49], we take the following variable transformation
+         {
+          𝑥 = 0.5 + 𝜉 − 0.5𝜂,
+                                                                                                                                                                 (5.1)
+          𝑦 = 1.25 + 0.25𝜉 + 1.25𝜂 + 0.25𝜉𝜂.
+We utilize the following family of irrational functions as basis functions for the numerical approximation of the problem (1.1) in
+                            ̄,
+convex quadrilateral region Ω
+
+         Φ𝑛𝑚 (𝑥, 𝑦) = 𝜙𝑛 (𝑥(𝜉, 𝜂))𝜙𝑚 (𝑦(𝜉, 𝜂)),
+where 𝜙𝑛 (𝜉) = 𝐿𝑛 (𝜉) − 𝐿𝑛+2 (𝜉).
+   We take 𝜀 = 1, 0.1, 0.01, 0.005, 10−3 , 10−4 , 10−5 , 10−7 when employing the Legendre-Galerkin method. In the right panel of Fig. 5.10,
+we present the numerical solution with 𝑁 = 30. Additionally, the error distribution obtained with 𝑁 = 30 using the Legendre-Galerkin
+
+                                                                                   639
+L. Jin, Z. Li, P. Wang et al.                                                                                          Applied Numerical Mathematics 207 (2025) 621–641
+
+
+
+
+                                      Fig. 5.10. Left: the image of the quadrilateral region Ω, right: the numerical solution with 𝑁 = 30.
+
+
+                                Table 5.9
+                                The error of the numerical solution for varying values of 𝑁 .
+
+                                                    𝑁 =8          𝑁 = 12       𝑁 = 16       𝑁 = 20         𝑁 = 24      𝑁 = 28       𝑁 = 32
+                                  ‖𝑢 − 𝑢𝑁 ‖𝐿∞ (Ω)
+                                                ̄   1.48E-03      5.43E-06     1.35E-08         2.08E-11   4.96E-14    3.12E-14     2.69E-14
+                                  ‖𝑢 − 𝑢𝑁 ‖𝐿2 (Ω)
+                                               ̄    1.15E-03      4.97E-06     1.19E-08         1.75E-11   3.23E-14    1.64E-14     1.58E-14
+                                  cpu(s)            0.0741        0.0631       0.1907           0.6330     1.5535      3.1284       6.3064
+
+
+
+
+Fig. 5.11. Left: the convergence curves with diﬀerent norm, right: the error distribution of the numerical solution with 𝑁 = 30. (For interpretation of the colors in
+the ﬁgure(s), the reader is referred to the web version of this article.)
+
+
+method is illustrated in the right panel of Fig. 5.11. And the convergence curves of the numerical solutions in diﬀerent norms are
+presented in the left panel of Fig. 5.11. In Table 5.9, we list the discrete errors versus diﬀerent 𝑁 , respectively.
+
+6. Concluding remarks
+
+    In this paper, we develop the Legendre-Galerkin method with 𝐿2 -projection and the GLOFs-Galerkin method to numerically
+solve the fully nonlinear Monge-Ampère equation in two dimensional setting with the Dirichlet boundary conditions. We conduct a
+convergence analysis of the Legendre-Galerkin method with 𝐿2 -projection, discussing error estimates under 𝐻 1 -, 𝐻 2 -, and 𝐿2 -norms,
+which yield optimal results. A multiple-level framework, based on the continuation method, is established to solve the discretization
+schemes. Numerical experiments validate the accuracy of our approaches, with a comparative study highlighting the advantages of
+log orthogonal functions in corner singularity problems. The selection of initial values for our methods is straightforward. The results
+demonstrate that our methods have high-order accuracy and small computational cost. The simplicity and generality of our approaches
+make it poised to attract signiﬁcant interest within the science and engineering community. Given its ease of implementation, we
+anticipate widespread application of our methods in diverse problem-solving scenarios.
+
+CRediT authorship contribution statement
+
+   Lixiang Jin: Writing – original draft, Software. Zhaoxiang Li: Writing – review & editing, Supervision. Peipei Wang: Software.
+Lijun Yi: Supervision, Methodology.
+
+                                                                                      640
+L. Jin, Z. Li, P. Wang et al.                                                                                        Applied Numerical Mathematics 207 (2025) 621–641
+
+
+Declaration of competing interest
+
+    The authors declared that they have no conﬂict of interest.
+
+References
+
+ [1] G. Awanou, Standard ﬁnite elements for the numerical resolution of the elliptic Monge-Ampère equations: classical solutions, IMA J. Numer. Anal. 35 (3) (2015)
+     1150–1166.
+ [2] G. Awanou, Standard ﬁnite elements for the numerical resolution of the elliptic Monge-Ampère equation: Aleksandrov solutions, ESAIM: Math. Model. Numer.
+     Anal. 51 (2) (2017) 707–725.
+ [3] C. Bernardi, Y. Maday, Spectral Methods, in Handbook of Numerical Analysis, in: P. Ciarlet, J. Lions (Eds.), vol. 5, North-Holland, Amsterdam, 1997.
+ [4] J. Benamou, Y. Brenier, Weak existence for the semigeostrophic equations formulated as a coupled Monge-Ampère/transport problem, SIAM J. Appl. Math.
+     58 (5) (1998) 1450–1461.
+ [5] J. Benito, A. García, L. Negreanu, et al., Solving Monge-Ampère equation in 2D and 3D by generalized ﬁnite diﬀerence method, Eng. Anal. Bound. Elem. 124 (2)
+     (2021) 52–63.
+ [6] K. Böhmer, R. Schaback, A meshfree method for solving the Monge-Ampère equation, Numer. Algorithms 82 (2) (2019) 539–551.
+ [7] S. Brenner, L. Scott, The Mathematical Theory of Finite Element Methods, third edition, Springer, 2008.
+ [8] S. Brenner, T. Gudi, M. Neilan, et al., 𝐶 0 penalty methods for the fully nonlinear Monge-Ampère equation, Math. Comput. 80 (276) (2011) 1979–1995.
+ [9] S. Brenner, M. Neilan, Finite element approximations of the three dimensional Monge-Ampère equation, ESAIM: Math. Model. Numer. Anal. 46 (5) (2012)
+     979–1001.
+[10] L. Caﬀarelli, M. Milman, Monge-Ampère equation: applications to geometry and optimization, Contemp. Math. 226 (1999) 1–53.
+[11] C. Canuto, M. Hussaini, A. Quarteroni, et al., Spectral Methods Fundamentals in Single Domains, Springer-Verlag, Berlin, 2006.
+[12] H. Chen, X. Feng, Z. Zhang, A recovery-based linear 𝐶 0 ﬁnite element method for a fourth-order singularly perturbed Monge-Ampère equation, Adv. Comput.
+     Math. 47 (2) (2021) 1–37.
+[13] S. Chen, J. Shen, Z. Zhang, et al., A spectrally accurate approximation to subdiﬀusion equations using the log orthogonal functions, SIAM J. Sci. Comput. 42 (2)
+     (2020) A849–A877.
+[14] S. Chen, J. Shen, Log orthogonal functions: approximation properties and applications, IMA J. Numer. Anal. 42 (1) (2022) 712–743.
+[15] S. Chen, Z. Zhang, An exponential convergence approximation to singularly perturbed problems by Log orthogonal functions, Calcolo 59 (3) (2022) 1–23.
+[16] O. Davydov, A. Saeed, Numerical solution of fully nonlinear elliptic equations by Böhmer’s method, J. Comput. Appl. Math. 254 (2013) 43–54.
+[17] E. Dean, R. Glowinski, Numerical methods for fully nonlinear elliptic equations of the Monge-Ampère type, Comput. Methods Appl. Mech. Eng. 195 (13–16)
+     (2006) 1344–1386.
+[18] L. Evans, Partial diﬀerential equations and Monge-Kantorovich mass transfer, Curr. Dev. Math. 1 (1997) 65–126.
+[19] X. Feng, T. Lewis, Nonstandard local discontinuous Galerkin methods for fully nonlinear second order elliptic and parabolic equations in high dimensions, J. Sci.
+     Comput. 77 (3) (2018) 1534–1565.
+[20] X. Feng, M. Neilan, Vanishing moment method and moment solutions for fully nonlinear second order partial diﬀerential equations, J. Sci. Comput. 38 (1) (2009)
+     74–98.
+[21] X. Feng, M. Neilan, Mixed ﬁnite element methods for the fully nonlinear Monge-Ampère equation based on the vanishing moment method, SIAM J. Numer. Anal.
+     47 (2) (2009) 1226–1250.
+[22] X. Feng, M. Neilan, Analysis of Galerkin methods for the fully nonlinear Monge-Ampère equation, J. Sci. Comput. 47 (3) (2011) 303–327.
+[23] X. Feng, R. Glowinski, M. Neilan, Recent developments in numerical methods for fully nonlinear second order partial diﬀerential equations, SIAM Rev. 55 (2)
+     (2013) 205–267.
+[24] X. Feng, M. Neilan, Finite element approximations of general fully nonlinear second order elliptic partial diﬀerential equations based on the vanishing moment
+     method, Comput. Math. Appl. 68 (12) (2014) 2182–2204.
+[25] X. Feng, M. Neilan, Convergence of a fourth-order singular perturbation of the 𝑛-dimensional radially symmetric Monge-Ampère equation, Appl. Anal. 93 (8)
+     (2013) 1626–1646.
+[26] U. Frisch, S. Matarrese, R. Mohayaee, et al., A reconstruction of the initial conditions of the universe by optimal mass transportation, Nature 417 (6886) (2002)
+     260–262.
+[27] B. Froese, A numerical method for the elliptic Monge-Ampère equation with transport boundary conditions, SIAM J. Sci. Comput. 34 (3) (2012) A1432–A1459.
+[28] B. Froese, A. Oberman, Fast ﬁnite diﬀerence solvers for singular solutions of the elliptic Monge-Ampère equation, J. Comput. Phys. 230 (3) (2011) 818–834.
+[29] D. Gallistl, N. Tran, Convergence of a regularized ﬁnite element discretization of the two-dimensional Monge-Ampère equation, Math. Comput. 92 (342) (2023)
+     1467–1490.
+[30] D. Gilbarg, N.S. Trudinger, Fully nonlinear equations, in: Elliptic Partial Diﬀerential Equations of Second Order, Springer, Berlin, Heidelberg, 2001, pp. 441–490,
+     Ch. 17.
+[31] B. Guo, Spectral Methods and Their Applications, World Scientiﬁc, Singapore, 1998.
+[32] B. Guo, H. Jia, Spectral method on quadrilaterals, Math. Comput. 79 (2010) 2237–2264.
+[33] Cristian E. Gutiérrez, The Monge-Ampère Equation, Progress in Nonlinear Diﬀerential Equations and Their Applications, vol. 89, Birkhäuser/Springer, 2016.
+[34] B. Hamfeldt, J. Lesniewski, Convergent ﬁnite diﬀerence methods for fully nonlinear elliptic equations in three dimensions, J. Sci. Comput. 90 (1) (2021) 1–36.
+[35] U. John, On the second boundary value problem for equations of Monge-Ampère type, J. Reine Angew. Math. 487 (1997) 115–124.
+[36] M. Lai, J. Lee, Trivariate spline collocation methods for numerical solution to 3D Monge-Ampère equation, J. Sci. Comput. 95 (2) (2023) 1–29.
+[37] Q. Li, Z. Liu, Solving the 2D elliptic Monge-Ampère equation by a Kansa’s method, Acta Math. Appl. Sin. Engl. Ser. 33 (2) (2017) 269–276.
+[38] J. Liu, B. Froese, A. Oberman, et al., A multigrid scheme for 3D Monge-Ampère equations, Int. J. Comput. Math. 94 (9) (2017) 1850–1866.
+[39] Z. Liu, Q. Xu, On multiscale RBF collocation methods for solving the Monge-Ampère equation, Math. Probl. Eng. 20 (1) (2020) 1–10.
+[40] M. Neilan, A nonconforming Morley ﬁnite element method for the fully nonlinear Monge-Ampère equation, Numer. Math. 115 (3) (2010) 371–394.
+[41] M. Neilan, Quadratic ﬁnite element approximations of the Monge-Ampère equation, J. Sci. Comput. 54 (1) (2013) 200–226.
+                                                                         𝜕2 𝑧 𝜕2 𝑧      𝜕2 𝑧 2
+[42] V. Oliker, L. Prussner, On the numerical solution of the equation
+                                                                         𝜕𝑥2 𝜕𝑦2
+                                                                                   − ( 𝜕𝑥𝜕𝑦  ) = 𝑓 and its discretizations, Numer. Math. 54 (1989) 271–293.
+[43] C. Schwab, P- and Hp- Finite Element Methods Theory and Applications in Solid and Fluid Mechanics, Clarendon Press, Oxford, 1998.
+[44] J. Shen, Eﬃcient spectral-Galerkin method I. Direct solvers of second and fourth order equations using Legendre polynomials, SIAM J. Sci. Comput. 15 (6) (1994)
+     1489–1505.
+[45] J. Shen, T. Tang, L. Wang, Spectral Methods, Algorithms, Analysis and Applications, Springer Science & Business Media, New York, 2011.
+[46] M. Sulman, F. Williams, D. Russell, An eﬃcient approach for the numerical solution of the Monge-Ampère equation, Appl. Numer. Math. 61 (3) (2011) 298–307.
+[47] N. Trudinger, Lectures on Fully Nonlinear PDEs in Geometry, Australian National University, 2004.
+[48] Y. Wang, W. Hao, G. Lin, Two-level spectral methods for nonlinear elliptic equations with multiple solutions, SIAM J. Sci. Comput. 40 (4) (2018) B1180–B1205.
+[49] X. Yu, B. Guo, Spectral method for fourth-order problems on quadrilaterals, J. Sci. Comput. 66 (2) (2016) 477–503.
+
+
+                                                                                  641
+

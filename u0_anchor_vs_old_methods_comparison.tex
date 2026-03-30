@@ -1,0 +1,246 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[a4paper,margin=1in]{geometry}
+\usepackage{fontspec}
+\usepackage{xeCJK}
+\usepackage{amsmath,amssymb,bm}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{hyperref}
+\usepackage{array}
+
+\setmainfont{Times New Roman}
+\setCJKmainfont{SimSun}
+\setCJKsansfont{Microsoft YaHei}
+\setCJKmonofont{SimSun}
+\setmonofont{Consolas}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    urlcolor=blue,
+    citecolor=blue
+}
+
+\title{关于当前 \texorpdfstring{$u_0$}{u0} 锚定同伦代码与先前原型方法的比较说明}
+\author{Codex 对比整理稿}
+\date{March 22, 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+本文对当前可稳定收敛的 $u_0$ 锚定同伦 Legendre--Galerkin 代码与仓库中若干先前的同伦原型代码进行比较，重点说明它们在连续模型、锚定态构造、边界处理、Jacobian 结构以及 Newton 迭代机制上的差异，并分析为何先前代码更容易出现 Newton 不收敛或 Jacobian 奇异、病态，而当前代码可以稳定工作。结论是：当前方法并不是简单地“换了一个程序写法”，而是在模型设计层面引入了更合理的锚定起点、更清晰的边界 lifting、更稳定的质量矩阵线性部分、解析 Jacobian 以及凸性约束，从而显著改善了 Newton 线性化的可逆性与 continuation 路径的稳定性。
+\end{abstract}
+
+\section{比较对象}
+本文比较以下几份代码：
+\begin{itemize}[leftmargin=2em]
+\item 当前成功方法：\texttt{u0\_anchor\_monge\_ampere\_homotopy\_demo.m}
+\item 先前的双调和同伦原型：\texttt{monge\_ampere\_homotopy\_legendre\_galerkin\_demo.m}
+\item 先前的 Poisson--Monge--Amp\`ere 同伦原型：\\
+\texttt{poisson\_to\_monge\_ampere\_homotopy\_bmatrix\_demo.m}
+\item 先前的 image homotopy 原型：\texttt{image\_homotopy\_legendre\_bmatrix\_demo.m}
+\end{itemize}
+
+这些代码都采用了相近的 Legendre--Galerkin 空间与 B-matrix 变换链，但它们在“求解哪一个连续问题”以及“Newton 在什么样的状态上做线性化”这两点上存在本质区别。
+
+\section{连续模型的根本区别}
+\subsection{当前成功代码的连续模型}
+当前代码求解的是如下锚定同伦问题：
+\begin{equation}
+t(u-u_0)+(1-t)(\det(D^2u)-f)=0,
+\qquad t\in[0,1].
+\label{eq:new_homotopy}
+\end{equation}
+见 \texttt{u0\_anchor\_monge\_ampere\_homotopy\_demo.m} 第 4 行，以及第 311--327 行的残差和 Jacobian 定义。该同伦有两个关键性质：
+\begin{itemize}[leftmargin=2em]
+\item 当 $t=1$ 时，方程变成 $u=u_0$，这是一个明确、可直接构造的起点；
+\item 当 $t=0$ 时，方程正好退化为目标方程 $\det(D^2u)=f$。
+\end{itemize}
+
+\subsection{旧代码的连续模型}
+先前代码中采用的是不同的辅助方程：
+\begin{enumerate}[leftmargin=2em]
+\item 双调和同伦代码使用
+\begin{equation}
+(1-t)(-\varepsilon \Delta^2u)+t\det(D^2u)=f,
+\label{eq:old_biharm}
+\end{equation}
+对应 \texttt{monge\_ampere\_homotopy\_legendre\_galerkin\_demo.m} 第 4 行以及第 227--250 行附近的实现。
+
+\item Poisson 同伦代码使用
+\begin{equation}
+t\Delta u+(1-t)\det(D^2u)=f,
+\label{eq:old_poisson}
+\end{equation}
+对应 \texttt{poisson\_to\_monge\_ampere\_homotopy\_bmatrix\_demo.m} 第 4 行以及第 193--229 行附近的实现。
+
+\item image homotopy 代码使用
+\begin{equation}
+t\,g(x,y)+(1-t)\det(D^2u)=f(x,y,t),
+\label{eq:old_image}
+\end{equation}
+对应 \texttt{image\_homotopy\_legendre\_bmatrix\_demo.m} 第 4 行以及第 202--238 行附近的实现。
+\end{enumerate}
+
+这些旧模型的问题在于：它们的起点通常不是一个“已知且和最终解分支自然相连”的状态，甚至在 image homotopy 中，当 $t=1$ 时方程根本不再包含未知量 $u$，不构成真正的 PDE 求解问题。
+
+\section{为什么当前方法的锚定起点更合理}
+当前成功代码中，锚定态不是由精确解加泡函数构造，而是通过 Poisson 型边值问题
+\begin{equation}
+\Delta u_0 = 2\sqrt{f},
+\qquad
+u_0=g \quad \text{on }\partial\Omega
+\label{eq:anchor_poisson}
+\end{equation}
+生成。对应代码实现见 \texttt{u0\_anchor\_monge\_ampere\_homotopy\_demo.m} 第 243--282 行，其中第 258--282 行给出了 Poisson 源项与锚定态系数的构造。
+
+进一步地，将 $u_0$ 分解为 $u_0=U_0+U_b$ 后，齐次部分满足
+\[
+\Delta U_0 = 2\sqrt{f}-\Delta U_b,
+\qquad
+U_0=0 \quad \text{on }\partial\Omega.
+\]
+在参考区域离散实现里，这被写成
+\[
+\partial_{\xi\xi}U_0+\partial_{\eta\eta}U_0
+=
+\frac{1}{2}\sqrt{f}-\bigl(\partial_{\xi\xi}U_b+\partial_{\eta\eta}U_b\bigr).
+\]
+
+这种锚定构造相比旧方法更合理，原因在于：
+\begin{itemize}[leftmargin=2em]
+\item $u_0$ 与目标问题共享完全相同的边界值；
+\item $u_0$ 仅依赖 $f$ 与 $g$，不需要知道精确解；
+\item 锚定态来自一个标准椭圆型问题，通常具有较平滑、较稳定的几何形状；
+\item continuation 从 $t=1$ 的已知状态 $u=u_0$ 起步，初始层的 Newton 任务最为简单。
+\end{itemize}
+
+这里需要特别区分两件事：当前代码是“用一次 Poisson 方程来生成锚定态”，而旧的 Poisson 同伦代码 \eqref{eq:old_poisson} 则是“把 Poisson 方程本身作为整条 continuation 路径的一端”。这两者并不是同一种设计。前者只是为锚定起点服务，后者则改变了连续模型本身。
+
+相反，双调和同伦代码使用的是线性双调和问题解作为起点，旧的 Poisson 同伦代码虽然也引入了 Poisson 型结构，但它对应的是另一条辅助路径 \eqref{eq:old_poisson}，并不保证整个 continuation 过程都贴近目标凸解分支。也就是说，旧代码中的初值即便“数值上看起来不差”，也不意味着它们在每一层同伦方程下都提供了良好的 Newton 线性化背景。
+
+\section{边界处理的区别}
+当前代码显式采用
+\begin{equation}
+u = U + U_b,
+\label{eq:split}
+\end{equation}
+其中 $U_b$ 为边界 lifting，见 \texttt{u0\_anchor\_monge\_ampere\_homotopy\_demo.m} 第 243--279 行与第 285--297 行。进一步地，锚定状态也对应分解后的齐次部分
+\[
+U_0 = u_0 - U_b.
+\]
+这意味着：
+\begin{itemize}[leftmargin=2em]
+\item Newton 迭代只作用在齐次未知量 $U$ 上；
+\item 边界条件被稳定地编码进 $U_b$，不会在迭代过程中漂移；
+\item 二阶导数中的 lifting 贡献被显式加入 Hessian 计算，见第 382--385 行。
+\end{itemize}
+
+先前几份旧代码中，并非都以这种方式把边界与内部未知量彻底拆开。边界未处理干净时，Newton 线性化对应的离散状态就更容易偏离目标解分支，进而加剧 Jacobian 的病态性。
+
+\section{Jacobian 结构为什么不同}
+\subsection{当前代码的 Jacobian}
+当前代码中，残差为
+\begin{equation}
+R_t(U)
+\;=\;
+\frac{t}{16}M(U-U_0) + (1-t)N(U) - (1-t)F,
+\label{eq:new_residual}
+\end{equation}
+对应源码第 311--317 行；Jacobian 为
+\begin{equation}
+J_t(U)
+\;=\;
+\frac{t}{16}M + (1-t)J_{\det}(U),
+\label{eq:new_jacobian}
+\end{equation}
+对应源码第 320--327 行。
+
+这里最重要的是 $\frac{t}{16}M$ 这一项。只要 $t>0$，Jacobian 中就始终保留有一块稳定的、质量矩阵型的线性部分。它带来两个直接效果：
+\begin{itemize}[leftmargin=2em]
+\item 避免 Jacobian 完全由非线性行列式项主导；
+\item 在 continuation 前期为线性系统提供更强的可逆性支撑。
+\end{itemize}
+
+\subsection{旧代码的 Jacobian 或近似 Jacobian}
+旧代码的 Jacobian 更容易病态，原因包括：
+\begin{enumerate}[leftmargin=2em]
+\item 双调和同伦与 Poisson 同伦中的主导项分别是 $\Delta^2u$ 或 $\Delta u$ 与 $\det(D^2u)$ 的混合，它们并不是围绕一个明确锚定状态构造的质量型同伦；
+\item 若非线性部分占主导，Jacobian 的可逆性高度依赖当前 Hessian 是否处于良好的凸状态；
+\item 旧代码大多使用有限差分 Jacobian，而不是解析 Jacobian。
+\end{enumerate}
+
+这一点可以从源码中直接看出：
+\begin{itemize}[leftmargin=2em]
+\item \texttt{monge\_ampere\_homotopy\_legendre\_galerkin\_demo.m} 第 250--276 行调用有限差分 Jacobian；
+\item \texttt{poisson\_to\_monge\_ampere\_homotopy\_bmatrix\_demo.m} 第 193--229 行调用有限差分 Jacobian；
+\item \texttt{image\_homotopy\_legendre\_bmatrix\_demo.m} 第 202--238 行调用有限差分 Jacobian。
+\end{itemize}
+
+有限差分 Jacobian 在全非线性问题中容易放大噪声，尤其当当前迭代点离正确分支较远时，会导致：
+\begin{itemize}[leftmargin=2em]
+\item 数值导数不稳定；
+\item Jacobian 列向量误差较大；
+\item 条件数恶化；
+\item 线搜索虽然看到残差暂时下降，但未必沿着正确分支前进。
+\end{itemize}
+
+\section{凸性约束为何重要}
+当前代码并不只依赖“残差下降”来接受 Newton 步，而是显式监控 Hessian 特征值和半正定比例。相关实现见：
+\begin{itemize}[leftmargin=2em]
+\item Hessian 诊断：第 340--356 行；
+\item 凸性指标：第 359--379 行；
+\item 线搜索接受条件：第 763--775 行。
+\end{itemize}
+
+这一步非常关键。对于 Monge--Amp\`ere 方程而言，正确数值解通常对应凸解分支。若 Newton 迭代在某一步把解推进到非凸区域，即使代数残差暂时下降，线性化矩阵也可能迅速退化甚至接近奇异。当前代码通过凸性约束避免了这种“残差下降但分支错误”的情况，因此 Jacobian 在线性化时始终保持较好的椭圆性背景。
+
+旧代码的线搜索大多只检查残差是否下降，没有显式拒绝凸性明显恶化的步。于是它们更容易出现如下现象：
+\begin{itemize}[leftmargin=2em]
+\item Hessian 在部分节点失去正定性；
+\item 行列式线性化项退化；
+\item Jacobian 最小奇异值快速下降；
+\item Newton 步不再可信。
+\end{itemize}
+
+\section{为什么这次的方法可以行得通}
+综合来看，当前代码能稳定工作的原因不是单一的，而是多个设计共同作用的结果：
+\begin{enumerate}[leftmargin=2em]
+\item \textbf{同伦路径更自然：} 从 $u=u_0$ 平滑过渡到 $\det(D^2u)=f$，而不是从另一个性质差异较大的辅助 PDE 过渡；
+\item \textbf{锚定态构造更自洽：} $u_0$ 由 Poisson 型方程生成，既与边界相容，又不依赖精确解；
+\item \textbf{边界处理更干净：} 通过 $u=U+U_b$ 保证边界值始终一致；
+\item \textbf{Jacobian 含有稳定的质量矩阵项：} 使得 $t>0$ 时 Jacobian 更不容易退化；
+\item \textbf{采用解析 Jacobian：} 避免了有限差分导数带来的额外误差；
+\item \textbf{显式凸性约束：} 防止 Newton 迭代偏离凸解分支。
+\end{enumerate}
+
+因此，当前成功代码的稳定性本质上来源于“模型设计 + 离散处理 + 迭代控制”的系统改进，而不是单独某一行程序的偶然成功。
+
+\section{简要对比表}
+\begin{center}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{>{\raggedright\arraybackslash}p{3.0cm} >{\raggedright\arraybackslash}p{5.1cm} >{\raggedright\arraybackslash}p{5.1cm}}
+\toprule
+比较项 & 当前 $u_0$ 锚定同伦代码 & 先前旧同伦代码 \\
+\midrule
+连续模型起点 & $t=1$ 时为 $u=u_0$，起点明确且可控 & 起点常是双调和、Poisson 或非真正 PDE 的辅助状态 \\
+\midrule
+锚定态构造 & 由 $\Delta u_0=2\sqrt{f}$ 与边界值 $g$ 生成 & 起点通常不与目标边界和目标分支同时协调 \\
+\midrule
+边界处理 & 显式 lifting，$u=U+U_b$ & 边界与内部非线性耦合更强，处理不够统一 \\
+\midrule
+Jacobian & 解析 Jacobian，且含质量矩阵项 $\frac{t}{16}M$ & 主要依赖有限差分 Jacobian，缺少稳固线性骨架 \\
+\midrule
+步长接受标准 & 残差下降 + 凸性约束 & 多数仅依据残差下降 \\
+\midrule
+数值结果 & Jacobian 更稳，Newton 易收敛 & 更容易出现 Jacobian 奇异、病态与 Newton 失效 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\section{结论}
+先前代码失败的根本原因，不应简单理解为“程序写错了”，而应理解为：它们所选取的同伦路径、锚定状态和 Newton 线性化背景不够理想，因此 Jacobian 更容易退化到奇异或高度病态的状态。当前 $u_0$ 锚定同伦代码之所以能工作，是因为它在连续模型层面引入了一个与边界条件相容、由 Poisson 型方程自然生成的锚定起点，并在离散与迭代层面同时加入了解析 Jacobian、质量矩阵型稳定项以及凸性约束。这些改动共同提升了 Jacobian 的可逆性和 Newton 迭代的稳定性，从而使 continuation 真正成为一条“可走通”的路径。
+
+\end{document}
